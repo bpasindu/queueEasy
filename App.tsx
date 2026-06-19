@@ -12,6 +12,7 @@ import {
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
+import HomeScreen from './src/screens/patient/HomeScreen';
 import Logo from './src/components/Logo';
 import COLORS from './src/theme/colors';
 
@@ -55,51 +56,10 @@ function App() {
         );
       case 'patient_dashboard':
         return (
-          <SafeAreaView style={styles.dashboardContainer}>
-            <ScrollView contentContainerStyle={styles.dashboardContent}>
-              <View style={styles.dashboardHeader}>
-                <Logo size={40} />
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                  <Text style={styles.logoutText}>Sign out</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.welcomeSection}>
-                <Text style={styles.welcomeText}>Hello, John Doe</Text>
-                <Text style={styles.subtext}>You are currently in line for Cardiology Clinic</Text>
-              </View>
-
-              {/* Patient Queue Card */}
-              <View style={styles.queueCard}>
-                <Text style={styles.cardHeader}>ACTIVE BOOKING</Text>
-                <View style={styles.ticketContainer}>
-                  <Text style={styles.ticketLabel}>Your Turn</Text>
-                  <Text style={styles.ticketNumber}>#12</Text>
-                </View>
-                
-                <View style={styles.divider} />
-                
-                <View style={styles.queueStatusRow}>
-                  <View style={styles.statusCol}>
-                    <Text style={styles.statusLabel}>Now Serving</Text>
-                    <Text style={styles.statusValue}>#{servingNumber}</Text>
-                  </View>
-                  <View style={styles.statusCol}>
-                    <Text style={styles.statusLabel}>Estimated Wait</Text>
-                    <Text style={[styles.statusValue, { color: COLORS.primary }]}>~24 mins</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Informative tips */}
-              <View style={styles.tipsCard}>
-                <Text style={styles.tipsTitle}>💡 QueueEase Tip</Text>
-                <Text style={styles.tipsDescription}>
-                  Our machine learning model estimates wait time based on the doctor's average consulting speed today. We'll send you a push notification when your turn is close.
-                </Text>
-              </View>
-            </ScrollView>
-          </SafeAreaView>
+          <HomeScreen
+            onLogout={handleLogout}
+            userName="Nimal Perera"
+          />
         );
       case 'doctor_dashboard':
         return (
