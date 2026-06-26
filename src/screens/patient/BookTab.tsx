@@ -41,7 +41,7 @@ export const BookTab: React.FC<BookTabProps> = ({
   );
 
   const renderCheckCircleIcon = () => (
-    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ marginRight: 8 }}>
+    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={styles.iconMargin8}>
       <Circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2" />
       <Path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
@@ -165,7 +165,7 @@ export const BookTab: React.FC<BookTabProps> = ({
         <View style={styles.numbersSectionHeaderRow}>
           <Text style={styles.numbersSectionTitle}>NEXT AVAILABLE NUMBERS</Text>
           <View style={styles.aiPredictionHeader}>
-            <Svg width="12" height="12" viewBox="0 0 24 24" fill="#6F8C95" style={{ marginRight: 4 }}>
+            <Svg width="12" height="12" viewBox="0 0 24 24" fill="#6F8C95" style={styles.iconMargin4}>
               <Path d="M12 2c0 5.523-4.477 10-10 10 5.523 0 10 4.477 10 10 0-5.523 4.477-10 10-10-5.523 0-10-4.477-10-10z" />
             </Svg>
             <Text style={styles.aiPredictionLabel}>AI-predicted time</Text>
@@ -253,14 +253,14 @@ export const BookTab: React.FC<BookTabProps> = ({
         {/* Random Forest Prediction Alert Card */}
         <View style={styles.rfPredictionCard}>
           <View style={styles.rfHeaderRow}>
-            <Svg width="16" height="16" viewBox="0 0 24 24" fill={COLORS.primaryDark} style={{ marginRight: 6 }}>
+            <Svg width="16" height="16" viewBox="0 0 24 24" fill={COLORS.primaryDark} style={styles.iconMargin6}>
               <Path d="M12 2c0 5.523-4.477 10-10 10 5.523 0 10 4.477 10 10 0-5.523 4.477-10 10-10-5.523 0-10-4.477-10-10z" />
             </Svg>
             <Text style={styles.rfTitleText}>Random Forest prediction</Text>
           </View>
           <Text style={styles.rfDescriptionText}>
-            Number <Text style={{ fontWeight: '800', color: COLORS.textDark }}>#{selectedSlot}</Text> is predicted to be served at{' '}
-            <Text style={{ fontWeight: '800', color: COLORS.textDark }}>{slotTimes[selectedSlot]}</Text> — about <Text style={{ fontWeight: '800', color: COLORS.textDark }}>{getWaitMinutes(selectedSlot)} min</Text> from now, based on today's consultation pace (6.4m avg).
+            Number <Text style={styles.rfBoldText}>#{selectedSlot}</Text> is predicted to be served at{' '}
+            <Text style={styles.rfBoldText}>{slotTimes[selectedSlot]}</Text> — about <Text style={styles.rfBoldText}>{getWaitMinutes(selectedSlot)} min</Text> from now, based on today's consultation pace (6.4m avg).
           </Text>
         </View>
 
@@ -682,6 +682,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  iconMargin8: { marginRight: 8 },
+  iconMargin4: { marginRight: 4 },
+  iconMargin6: { marginRight: 6 },
+  rfBoldText: { fontWeight: '800', color: COLORS.textDark },
 });
 
 export default BookTab;

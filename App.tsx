@@ -121,28 +121,28 @@ function App() {
                 <Text style={[styles.cardHeader, { color: COLORS.primary }]}>QUEUE CONTROLLER</Text>
 
                 <View style={styles.ticketContainer}>
-                  <Text style={[styles.ticketLabel, { color: COLORS.white, opacity: 0.7 }]}>
+                  <Text style={[styles.ticketLabel, styles.ticketLabelOpacity]}>
                     Now Serving
                   </Text>
-                  <Text style={[styles.ticketNumber, { color: COLORS.white }]}>
+                  <Text style={[styles.ticketNumber, styles.ticketNumberColor]}>
                     #{servingNumber}
                   </Text>
                 </View>
 
-                <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+                <View style={styles.dividerLight} />
 
                 <View style={styles.queueStatusRow}>
                   <View style={styles.statusCol}>
-                    <Text style={[styles.statusLabel, { color: COLORS.white, opacity: 0.6 }]}>
+                    <Text style={[styles.statusLabel, styles.statusLabelOpacity]}>
                       Total Booked
                     </Text>
-                    <Text style={[styles.statusValue, { color: COLORS.white }]}>18 Patients</Text>
+                    <Text style={[styles.statusValue, styles.statusValueWhite]}>18 Patients</Text>
                   </View>
                   <View style={styles.statusCol}>
-                    <Text style={[styles.statusLabel, { color: COLORS.white, opacity: 0.6 }]}>
+                    <Text style={[styles.statusLabel, styles.statusLabelOpacity]}>
                       Avg Consult
                     </Text>
-                    <Text style={[styles.statusValue, { color: COLORS.primary }]}>7.2 mins</Text>
+                    <Text style={[styles.statusValue, styles.statusValuePrimary]}>7.2 mins</Text>
                   </View>
                 </View>
 
@@ -184,12 +184,17 @@ const styles = StyleSheet.create({
   cardHeader: { fontSize: 12, fontWeight: '800', letterSpacing: 1, color: COLORS.textMuted, marginBottom: 16 },
   ticketContainer: { alignItems: 'center', marginVertical: 12 },
   ticketLabel: { fontSize: 14, color: COLORS.textMuted, fontWeight: '600', marginBottom: 4 },
+  ticketLabelOpacity: { color: COLORS.white, opacity: 0.7 },
   ticketNumber: { fontSize: 64, fontWeight: '900', color: COLORS.textDark },
-  divider: { height: 1, backgroundColor: COLORS.inputBorder, marginVertical: 20 },
+  ticketNumberColor: { color: COLORS.white },
+  dividerLight: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 20 },
   queueStatusRow: { flexDirection: 'row', justifyContent: 'space-around' },
   statusCol: { alignItems: 'center' },
   statusLabel: { fontSize: 13, color: COLORS.textMuted, fontWeight: '500', marginBottom: 4 },
+  statusLabelOpacity: { color: COLORS.white, opacity: 0.6 },
   statusValue: { fontSize: 20, fontWeight: '700', color: COLORS.textDark },
+  statusValueWhite: { color: COLORS.white },
+  statusValuePrimary: { color: COLORS.primary },
   advanceButton: { backgroundColor: COLORS.primary, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center', marginTop: 24 },
   advanceButtonText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
 });
