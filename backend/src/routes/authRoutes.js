@@ -1,0 +1,27 @@
+/**
+ * QueueEase V2 — Auth Routes
+ */
+
+const express = require('express');
+const router = express.Router();
+const { body } = require('express-validator');
+const authController = require('../controllers/authController');
+const { protect, requireAdminKey } = require('../middleware/auth');
+const { registerValidation, loginValidation } = require('../middleware/validators');
+
+router.post('/register', registerValidation, authController.register);
+router.post('/login', loginValidation, authController.login);
+router.post('/firebase', authController.firebaseAuth);
+router.get('/me', protect, authController.getMe);
+router.put('/me', protect, authController.updateMe);
+router.put('/fcm-token', protect, authController.updateFcmToken);
+router.put('/change-password', protect, authController.changePassword);
+
+// Issue #12 fix: real password reset flow (was a fake Toast-only stub)
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
+
+// Issue #10/#11 fix: admin-only doctor/receptionist verification
+router.put('/verify/:userId', requireAdminKey, authController.verifyUser);
+
+module.exports = router;

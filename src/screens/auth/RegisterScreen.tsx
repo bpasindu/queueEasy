@@ -8,7 +8,10 @@ import {
   Platform,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from 'react-native';
+import api from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
 import Logo from '../../components/Logo';
 import CustomInput from '../../components/CustomInput';
@@ -30,13 +33,33 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
+    if (!name || !email || !phone || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
     setLoading(true);
-    // Simulate API registration call
-    setTimeout(() => {
+    try {
+      const response = await api.post('/auth/register', {
+        name,
+        email: email.trim(),
+        phone,
+        password,
+        role: 'patient',
+      });
+      if (response.data.success) {
+        const token = response.data.data.token;
+        if (token) {
+          await AsyncStorage.setItem('jwtToken', token);
+        }
+        onRegisterSuccess();
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Registration failed. Please try again.';
+      Alert.alert('Registration Failed', message);
+    } finally {
       setLoading(false);
-      onRegisterSuccess();
-    }, 1500);
+    }
   };
 
   return (
