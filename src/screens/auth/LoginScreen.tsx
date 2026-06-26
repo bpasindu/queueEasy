@@ -18,6 +18,7 @@ import COLORS from '../../theme/colors';
 
 interface LoginScreenProps {
   onNavigateToRegister: () => void;
+  onNavigateToForgotPassword?: () => void;
   onLoginSuccess: (role: 'patient' | 'doctor') => void;
 }
 
@@ -25,6 +26,7 @@ const { width } = Dimensions.get('window');
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onNavigateToRegister,
+  onNavigateToForgotPassword,
   onLoginSuccess,
 }) => {
   const [role, setRole] = useState<'patient' | 'doctor'>('patient');
@@ -168,7 +170,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             />
 
             {/* Forgot Password Link */}
-            <TouchableOpacity activeOpacity={0.6} style={styles.forgotContainer}>
+            <TouchableOpacity activeOpacity={0.6} style={styles.forgotContainer} onPress={onNavigateToForgotPassword}>
               <Text style={styles.forgotText}>Forgot password?</Text>
             </TouchableOpacity>
           </View>

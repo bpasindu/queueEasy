@@ -18,6 +18,9 @@ import ProfileTab from './ProfileTab';
 interface HomeScreenProps {
   onLogout: () => void;
   userName?: string;
+  onNavigateToNotifications?: () => void;
+  onNavigateToBookingHistory?: () => void;
+  onNavigateToHelpSupport?: () => void;
 }
 
 type TabType = 'Home' | 'Book' | 'Assist' | 'Profile';
@@ -25,6 +28,9 @@ type TabType = 'Home' | 'Book' | 'Assist' | 'Profile';
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onLogout,
   userName = 'Nimal Perera',
+  onNavigateToNotifications,
+  onNavigateToBookingHistory,
+  onNavigateToHelpSupport,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('Home');
   const [selectedDoctor, setSelectedDoctor] = useState<any>(clinics[0]); // Default to Dr. Silva
@@ -133,6 +139,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               setSelectedDoctor(clinic);
               setActiveTab('Book');
             }}
+            onNavigateToNotifications={onNavigateToNotifications}
           />
         );
       case 'Book':
@@ -161,6 +168,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <ProfileTab
             userName={userName}
             onLogout={onLogout}
+            onNavigateToBookingHistory={onNavigateToBookingHistory}
+            onNavigateToHelpSupport={onNavigateToHelpSupport}
           />
         );
     }

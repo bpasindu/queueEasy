@@ -12,11 +12,15 @@ import COLORS from '../../theme/colors';
 interface ProfileTabProps {
   userName: string;
   onLogout: () => void;
+  onNavigateToBookingHistory?: () => void;
+  onNavigateToHelpSupport?: () => void;
 }
 
 export const ProfileTab: React.FC<ProfileTabProps> = ({
   userName,
   onLogout,
+  onNavigateToBookingHistory,
+  onNavigateToHelpSupport,
 }) => {
   const renderChevronRight = () => (
     <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -53,7 +57,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
           <Text style={styles.profileOptionText}>Personal Details</Text>
           {renderChevronRight()}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.profileOptionRow}>
+        <TouchableOpacity style={styles.profileOptionRow} onPress={onNavigateToBookingHistory}>
           <Text style={styles.profileOptionText}>Booking History</Text>
           {renderChevronRight()}
         </TouchableOpacity>
@@ -63,6 +67,10 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         </TouchableOpacity>
         <TouchableOpacity style={styles.profileOptionRow}>
           <Text style={styles.profileOptionText}>Notification Settings</Text>
+          {renderChevronRight()}
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.profileOptionRow} onPress={onNavigateToHelpSupport}>
+          <Text style={styles.profileOptionText}>Help &amp; Support</Text>
           {renderChevronRight()}
         </TouchableOpacity>
       </View>
