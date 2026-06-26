@@ -22,6 +22,7 @@ interface HomeTabProps {
   };
   onBookSlotPress: () => void;
   onClinicCardPress: (clinic: any) => void;
+  onNavigateToNotifications?: () => void;
 }
 
 export const HomeTab: React.FC<HomeTabProps> = ({
@@ -29,6 +30,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   activeBooking,
   onBookSlotPress,
   onClinicCardPress,
+  onNavigateToNotifications,
 }) => {
   // Render SVG icons helper functions
   const renderBellIcon = () => (
@@ -111,7 +113,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             <Text style={styles.greetingText}>Good morning</Text>
             <Text style={styles.profileNameText}>{userName} 👋</Text>
           </View>
-          <TouchableOpacity style={styles.bellButton} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.bellButton} activeOpacity={0.8} onPress={onNavigateToNotifications}>
             {renderBellIcon()}
           </TouchableOpacity>
         </View>

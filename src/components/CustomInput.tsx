@@ -148,6 +148,7 @@ export const CustomInput: React.FC<CustomInputProps> = ({
 
   return (
     <Animated.View
+      // eslint-disable-next-line react-native/no-inline-styles
       style={[
         styles.container,
         {
