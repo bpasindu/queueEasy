@@ -39,6 +39,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [selectedSlot, setSelectedSlot] = useState<number>(4);
   const [activeBooking, setActiveBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   const fetchDashboardData = async () => {
     try {
@@ -51,13 +52,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         }
       }
 
-      const bookingRes = await api.get('/bookings/active');
-      if (bookingRes.data.success) {
-        if (bookingRes.data.hasActiveBooking) {
-          setActiveBooking(bookingRes.data.data);
-        } else {
-          setActiveBooking(null);
+      const activeRes = await api.get('/bookings/active');
+      if (activeRes.data.success) {
+        setActiveBooking(activeRes.data.hasActiveBooking ? activeRes.data.data : null);
+      } else {
+        setActiveBooking(null);
+      }
+
+      try {
+        const profileRes = await api.get('/auth/profile');
+        if (profileRes.data.success) {
+          setUserProfile(profileRes.data.user);
         }
+      } catch (err) {
+        console.error('Error fetching profile:', err);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -162,7 +170,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       case 'Home':
         return (
           <HomeTab
-            userName={userName}
+            userName={userProfile?.name || userName}
             activeBooking={activeBooking}
             clinics={clinicsList}
             onBookSlotPress={() => {
@@ -200,7 +208,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       case 'Profile':
         return (
           <ProfileTab
-            userName={userName}
+            userProfile={userProfile}
+            activeBooking={activeBooking}
             onLogout={onLogout}
             onNavigateToBookingHistory={onNavigateToBookingHistory}
             onNavigateToHelpSupport={onNavigateToHelpSupport}

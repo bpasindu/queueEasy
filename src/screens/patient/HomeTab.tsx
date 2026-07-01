@@ -50,6 +50,27 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 }) => {
   const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  const getGreeting = () => {
+    try {
+      const colomboHourStr = new Date().toLocaleString('en-US', {
+        timeZone: 'Asia/Colombo',
+        hour: 'numeric',
+        hour12: false,
+      });
+      const hour = parseInt(colomboHourStr, 10);
+      if (hour >= 5 && hour < 12) return 'Good morning';
+      if (hour >= 12 && hour < 17) return 'Good afternoon';
+      if (hour >= 17 && hour < 22) return 'Good evening';
+      return 'Good night';
+    } catch (e) {
+      const hour = new Date().getHours();
+      if (hour >= 5 && hour < 12) return 'Good morning';
+      if (hour >= 12 && hour < 17) return 'Good afternoon';
+      if (hour >= 17 && hour < 22) return 'Good evening';
+      return 'Good night';
+    }
+  };
   // Render SVG icons helper functions
   const renderBellIcon = () => (
     <View style={styles.notificationBellContainer}>
@@ -128,7 +149,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       <View style={styles.headerBlock}>
         <View style={styles.headerTopRow}>
           <View>
-            <Text style={styles.greetingText}>Good morning</Text>
+            <Text style={styles.greetingText}>{getGreeting()}</Text>
             <Text style={styles.profileNameText}>{userName} 👋</Text>
           </View>
           <TouchableOpacity style={styles.bellButton} activeOpacity={0.8} onPress={onNavigateToNotifications}>
@@ -250,38 +271,52 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           </TouchableOpacity>
         </View>
 
-        {clinics.map(clinic => (
-          <TouchableOpacity
-            key={clinic._id || clinic.id}
-            style={styles.clinicCard}
-            activeOpacity={0.8}
-            onPress={() => onClinicCardPress(clinic)}
-          >
-            <View style={styles.stethoscopeCircle}>
-              {renderStethoscopeIcon()}
-            </View>
-            <View style={styles.clinicInfoContainer}>
-              <Text style={styles.clinicTitleText}>
-                {clinic.doctor} — {clinic.specialty}
-              </Text>
-              <View style={styles.locationRow}>
-                {renderMapPinIcon()}
-                <Text style={styles.locationText}>{clinic.clinic}</Text>
+        {clinics.length > 0 ? (
+          clinics.map(clinic => (
+            <TouchableOpacity
+              key={clinic._id || clinic.id}
+              style={styles.clinicCard}
+              activeOpacity={0.8}
+              onPress={() => onClinicCardPress(clinic)}
+            >
+              <View style={styles.stethoscopeCircle}>
+                {renderStethoscopeIcon()}
               </View>
-              <View style={styles.clinicFooterRow}>
-                <View style={styles.queueBadge}>
-                  <Text style={styles.queueBadgeText}>
-                    {clinic.inQueue} in queue
+              <View style={styles.clinicInfoContainer}>
+                <Text style={styles.clinicTitleText}>
+                  {clinic.doctor} — {clinic.specialty}
+                </Text>
+                <View style={styles.locationRow}>
+                  {renderMapPinIcon()}
+                  <Text style={styles.locationText}>{clinic.clinic}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#2ECC71', marginRight: 6 }} />
+                  <Text style={{ fontSize: 12, color: '#2ECC71', fontWeight: '700' }}>
+                    Ongoing Call: Ticket #{clinic.currentServing || 1}
                   </Text>
                 </View>
-                <Text style={styles.etaText}>~{clinic.eta} min</Text>
+                <View style={styles.clinicFooterRow}>
+                  <View style={styles.queueBadge}>
+                    <Text style={styles.queueBadgeText}>
+                      {clinic.inQueue} in queue
+                    </Text>
+                  </View>
+                  <Text style={styles.etaText}>~{clinic.eta} min</Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.chevronContainer}>
-              {renderChevronRight()}
-            </View>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.chevronContainer}>
+                {renderChevronRight()}
+              </View>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <View style={{ backgroundColor: COLORS.white, borderRadius: 24, padding: 24, alignItems: 'center', marginTop: 12, borderWidth: 1, borderColor: 'rgba(229, 236, 238, 0.5)' }}>
+            <Text style={{ color: COLORS.textMuted, fontSize: 14, fontWeight: '600', textAlign: 'center', lineHeight: 22 }}>
+              No clinics are hosting active sessions at the moment. Please wait for doctors to start their session.
+            </Text>
+          </View>
+        )}
       </View>
       {/* Live Queue Tracking Modal */}
       {activeBooking && (

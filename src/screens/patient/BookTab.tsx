@@ -131,42 +131,50 @@ export const BookTab: React.FC<BookTabProps> = ({
           Select your favorite specialist and book a time slot to skip the waiting line.
         </Text>
 
-        {clinics.map(clinic => {
-          const doctorName = clinic.doctor || 'Doctor';
-          const initials = doctorName.startsWith('Dr. ') 
-            ? (doctorName.split(' ')[1] ? doctorName.split(' ')[1][0] : doctorName[0]) 
-            : doctorName[0];
+        {clinics.length > 0 ? (
+          clinics.map(clinic => {
+            const doctorName = clinic.doctor || 'Doctor';
+            const initials = doctorName.startsWith('Dr. ') 
+              ? (doctorName.split(' ')[1] ? doctorName.split(' ')[1][0] : doctorName[0]) 
+              : doctorName[0];
 
-          return (
-            <TouchableOpacity
-              key={clinic._id || clinic.id}
-              style={styles.bookingListItem}
-              activeOpacity={0.85}
-              onPress={() => setSelectedDoctor(clinic)}
-            >
-              <View style={styles.bookingListTop}>
-                <View style={styles.clinicImagePlaceholder}>
-                  <Text style={styles.clinicInitials}>
-                    {initials}
+            return (
+              <TouchableOpacity
+                key={clinic._id || clinic.id}
+                style={styles.bookingListItem}
+                activeOpacity={0.85}
+                onPress={() => setSelectedDoctor(clinic)}
+              >
+                <View style={styles.bookingListTop}>
+                  <View style={styles.clinicImagePlaceholder}>
+                    <Text style={styles.clinicInitials}>
+                      {initials}
+                    </Text>
+                  </View>
+                  <View style={styles.bookingListInfo}>
+                    <Text style={styles.bookingDoctorName}>{clinic.doctor}</Text>
+                    <Text style={styles.bookingDoctorSpecialty}>{clinic.specialty}</Text>
+                    <Text style={styles.bookingDoctorLocation}>{clinic.clinic}</Text>
+                  </View>
+                </View>
+                <View style={styles.bookingListBottom}>
+                  <Text style={styles.nextAvailableText}>
+                    Next available slot: Today, {clinic.actualStart || clinic.scheduledStart || '9:00 AM'}
                   </Text>
+                  <View style={styles.bookingBookBtn}>
+                    <Text style={styles.bookingBookBtnText}>Book Now</Text>
+                  </View>
                 </View>
-                <View style={styles.bookingListInfo}>
-                  <Text style={styles.bookingDoctorName}>{clinic.doctor}</Text>
-                  <Text style={styles.bookingDoctorSpecialty}>{clinic.specialty}</Text>
-                  <Text style={styles.bookingDoctorLocation}>{clinic.clinic}</Text>
-                </View>
-              </View>
-              <View style={styles.bookingListBottom}>
-                <Text style={styles.nextAvailableText}>
-                  Next available slot: Today, {clinic.actualStart || clinic.scheduledStart || '9:00 AM'}
-                </Text>
-                <View style={styles.bookingBookBtn}>
-                  <Text style={styles.bookingBookBtnText}>Book Now</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+              </TouchableOpacity>
+            );
+          })
+        ) : (
+          <View style={{ backgroundColor: COLORS.white, borderRadius: 24, padding: 24, alignItems: 'center', marginTop: 16, borderWidth: 1, borderColor: 'rgba(229, 236, 238, 0.5)' }}>
+            <Text style={{ color: COLORS.textMuted, fontSize: 14, fontWeight: '600', textAlign: 'center', lineHeight: 22 }}>
+              No clinics are currently hosting active sessions. Please try again later once sessions start.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     );
   }

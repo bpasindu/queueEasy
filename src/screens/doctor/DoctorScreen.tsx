@@ -11,6 +11,7 @@ import {
   Alert,
   Linking,
   RefreshControl,
+  TextInput,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import COLORS from '../../theme/colors';
@@ -23,6 +24,18 @@ interface DoctorScreenProps {
 export const DoctorScreen: React.FC<DoctorScreenProps> = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Helper to get current time formatted as "H:MM AM/PM"
+  const getCurrentTimeFormatted = () => {
+    const now = new Date();
+    let hours = now.getHours();
+    const minutes = now.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+    return `${hours}:${minutesStr} ${ampm}`;
+  };
 
   // Clinic info
   const [doctorName, setDoctorName] = useState('Dr. Silva');
@@ -46,6 +59,53 @@ export const DoctorScreen: React.FC<DoctorScreenProps> = ({ onLogout }) => {
 
   // Upcoming patient list
   const [upcomingList, setUpcomingList] = useState<any[]>([]);
+
+  // Start session forms states
+  const [isOpen, setIsOpen] = useState(false);
+  const [maxPatients, setMaxPatients] = useState('14');
+  const [startingSession, setStartingSession] = useState(false);
+  const [endingSession, setEndingSession] = useState(false);
+  const [activatingRealTime, setActivatingRealTime] = useState(false);
+
+  // Generate valid hours within next 11 hours
+  const generateUpcomingHours = () => {
+    const hoursList = [];
+    const now = new Date();
+    let currentHour = now.getHours();
+
+    for (let i = 0; i <= 11; i++) {
+      const hr = (currentHour + i) % 24;
+      const ampm = hr >= 12 ? 'PM' : 'AM';
+      const displayHr = hr % 12 === 0 ? 12 : hr % 12;
+      hoursList.push({
+        rawHour: hr,
+        label: `${displayHr} ${ampm}`,
+        ampm: ampm,
+        displayHr: displayHr
+      });
+    }
+    return hoursList;
+  };
+
+  const upcomingHours = generateUpcomingHours();
+  const [selectedHourObj, setSelectedHourObj] = useState(upcomingHours[0]);
+  
+  const getNearest5MinutesStr = () => {
+    const now = new Date();
+    const roundedMins = Math.round(now.getMinutes() / 5) * 5;
+    if (roundedMins >= 60) return '00';
+    return roundedMins < 10 ? '0' + roundedMins : '' + roundedMins;
+  };
+  const [selectedMinute, setSelectedMinute] = useState(getNearest5MinutesStr());
+  const [startTime, setStartTime] = useState('');
+
+  useEffect(() => {
+    if (selectedHourObj) {
+      setStartTime(`${selectedHourObj.displayHr}:${selectedMinute} ${selectedHourObj.ampm}`);
+    }
+  }, [selectedHourObj, selectedMinute]);
+
+  const minuteOptions = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
 
   const fetchDoctorQueueStatus = async (showLoader = true) => {
     if (showLoader) setLoading(true);
@@ -75,6 +135,7 @@ export const DoctorScreen: React.FC<DoctorScreenProps> = ({ onLogout }) => {
         setNowServingPredicted(data.nowServingPredicted || '--');
 
         setUpcomingList(data.upcoming || []);
+        setIsOpen(data.isOpen);
       }
     } catch (error) {
       console.error('Error fetching doctor queue status:', error);
@@ -92,6 +153,76 @@ export const DoctorScreen: React.FC<DoctorScreenProps> = ({ onLogout }) => {
     setRefreshing(true);
     await fetchDoctorQueueStatus(false);
     setRefreshing(false);
+  };
+
+  const handleStartSession = async () => {
+    if (!startTime || !maxPatients) {
+      Alert.alert('Error', 'Please enter a start time and max patients queue limit.');
+      return;
+    }
+
+    try {
+      setStartingSession(true);
+      const response = await api.post('/doctor/start-session', {
+        actualStart: startTime,
+        maxPatients: parseInt(maxPatients, 10),
+      });
+
+      if (response.data.success) {
+        Alert.alert('Session Started', 'Your clinic session is now live! Patients can book slots.');
+        await fetchDoctorQueueStatus(true);
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to start session.';
+      Alert.alert('Error', message);
+    } finally {
+      setStartingSession(false);
+    }
+  };
+
+  const handleEndSession = () => {
+    Alert.alert(
+      'End Session',
+      'Are you sure you want to end this clinic session? This will close the queue for patients and clear any active bookings.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'End Session',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setEndingSession(true);
+              const response = await api.post('/doctor/end-session');
+              if (response.data.success) {
+                Alert.alert('Session Ended', 'Your clinic session has been closed successfully.');
+                await fetchDoctorQueueStatus(true);
+              }
+            } catch (error: any) {
+              const message = error.response?.data?.message || 'Failed to end session.';
+              Alert.alert('Error', message);
+            } finally {
+              setEndingSession(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleActivateRealTime = async () => {
+    try {
+      setActivatingRealTime(true);
+      const response = await api.post('/doctor/activate-real-time');
+      if (response.data.success) {
+        Alert.alert('Session Active', 'You have officially started the clinic session! Live call is active.');
+        await fetchDoctorQueueStatus(true);
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to start session in real time.';
+      Alert.alert('Error', message);
+    } finally {
+      setActivatingRealTime(false);
+    }
   };
 
   const handleMarkServed = async () => {
@@ -247,123 +378,270 @@ export const DoctorScreen: React.FC<DoctorScreenProps> = ({ onLogout }) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
         }
       >
-        {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          <View style={styles.statsRow}>
-            {/* Card 1 */}
-            <View style={styles.statCard}>
-              <View style={styles.statIconWrapper}>{renderGroupIcon()}</View>
-              <Text style={styles.statValue}>{inQueue}</Text>
-              <Text style={styles.statLabel}>In queue</Text>
+        {!isOpen ? (
+          <View style={styles.startSessionCard}>
+            <View style={styles.startSessionHeader}>
+              <Text style={styles.startSessionSub}>SESSION CONTROLLER</Text>
+              <Text style={styles.startSessionTitle}>Start Clinic Session</Text>
             </View>
 
-            {/* Card 2 */}
-            <View style={styles.statCard}>
-              <View style={[styles.statIconWrapper, { backgroundColor: '#EAFAD1' }]}>{renderCheckCircleIcon()}</View>
-              <Text style={styles.statValue}>{served}</Text>
-              <Text style={styles.statLabel}>Served</Text>
-            </View>
-          </View>
-
-          <View style={styles.statsRow}>
-            {/* Card 3 */}
-            <View style={styles.statCard}>
-              <View style={[styles.statIconWrapper, { backgroundColor: COLORS.primaryLight }]}>{renderClockIcon()}</View>
-              <Text style={styles.statValue}>{avgConsult}m</Text>
-              <Text style={styles.statLabel}>Avg consult</Text>
-            </View>
-
-            {/* Card 4 */}
-            <View style={styles.statCard}>
-              <View style={[styles.statIconWrapper, { backgroundColor: '#FDEBD0' }]}>{renderTrendUpIcon()}</View>
-              <Text style={styles.statValue}>{onTimePercent}</Text>
-              <Text style={styles.statLabel}>On-time %</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Start Times Row */}
-        <View style={styles.startTimesRow}>
-          <View style={styles.scheduledPill}>
-            {renderCalendarIcon()}
-            <Text style={styles.timeLabel}>SCHEDULED START</Text>
-            <Text style={styles.timeVal}>{scheduledStart}</Text>
-          </View>
-
-          <View style={styles.actualPill}>
-            {renderPlayCircleIcon()}
-            <Text style={[styles.timeLabel, { color: '#27AE60' }]}>ACTUAL START</Text>
-            <Text style={[styles.timeVal, { color: '#27AE60' }]}>{actualStart}</Text>
-          </View>
-        </View>
-
-        {/* Now Serving Card */}
-        <View style={styles.nowServingCard}>
-          <View style={styles.nowServingLeft}>
-            <Text style={styles.nowServingLabel}>NOW SERVING</Text>
-            <Text style={styles.nowServingValue} numberOfLines={1}>
-              #{nowServingSlot} · {nowServingName}
+            <Text style={styles.startSessionDesc}>
+              Patients will only be able to view your clinic and book numbers after you start the session.
             </Text>
-            <Text style={styles.nowServingPredicted}>
-              Predicted {nowServingPredicted}
-            </Text>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>CHOOSE START HOUR (NEXT 11 HOURS)</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalScroll}
+              >
+                {upcomingHours.map((hrObj, idx) => {
+                  const isSelected = selectedHourObj.label === hrObj.label;
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[
+                        styles.timePill,
+                        isSelected && styles.timePillSelected
+                      ]}
+                      onPress={() => setSelectedHourObj(hrObj)}
+                    >
+                      <Text
+                        style={[
+                          styles.timePillText,
+                          isSelected && styles.timePillTextSelected
+                        ]}
+                      >
+                        {hrObj.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>CHOOSE START MINUTE</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalScroll}
+              >
+                {minuteOptions.map((min, idx) => {
+                  const isSelected = selectedMinute === min;
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[
+                        styles.timePill,
+                        isSelected && styles.timePillSelected
+                      ]}
+                      onPress={() => setSelectedMinute(min)}
+                    >
+                      <Text
+                        style={[
+                          styles.timePillText,
+                          isSelected && styles.timePillTextSelected
+                        ]}
+                      >
+                        :{min}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            <View style={styles.selectedTimeDisplay}>
+              <Text style={styles.selectedTimeLabel}>SELECTED START TIME</Text>
+              <Text style={styles.selectedTimeValue}>{startTime}</Text>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>MAX PATIENTS (QUEUE LIMIT)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={maxPatients}
+                onChangeText={setMaxPatients}
+                placeholder="e.g. 14"
+                keyboardType="numeric"
+                placeholderTextColor={COLORS.textMuted}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.startBtn}
+              activeOpacity={0.85}
+              disabled={startingSession}
+              onPress={handleStartSession}
+            >
+              {startingSession ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <Text style={styles.startBtnText}>Start Session &amp; Open Queue</Text>
+              )}
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.markServedBtn}
-            activeOpacity={0.85}
-            onPress={handleMarkServed}
-          >
-            <Text style={styles.markServedText}>Mark served</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Upcoming Patients Section Header */}
-        <View style={styles.upcomingHeaderRow}>
-          <Text style={styles.upcomingTitle}>Upcoming patients</Text>
-          <View style={styles.aiPredictionHeader}>
-            {renderSparkleIcon()}
-            <Text style={styles.aiPredictionLabel}>AI-predicted</Text>
-          </View>
-        </View>
-
-        {/* Upcoming Patients List */}
-        {upcomingList.length > 0 ? (
-          upcomingList.map((item, index) => {
-            const patientName = item.patient?.name || `Patient Slot #${item.slotNumber}`;
-            const displayTime = item.predictedServingTime || '--';
-
-            return (
-              <View key={item._id || index} style={styles.patientListItem}>
-                <View style={styles.patientBadgeCircle}>
-                  <Text style={styles.patientBadgeText}>{item.slotNumber}</Text>
+        ) : (
+          <>
+            {/* Stats Grid */}
+            <View style={styles.statsGrid}>
+              <View style={styles.statsRow}>
+                {/* Card 1 */}
+                <View style={styles.statCard}>
+                  <View style={styles.statIconWrapper}>{renderGroupIcon()}</View>
+                  <Text style={styles.statValue}>{inQueue}</Text>
+                  <Text style={styles.statLabel}>In queue</Text>
                 </View>
-                <View style={styles.patientInfo}>
-                  <Text style={styles.patientName}>{patientName}</Text>
-                  <Text style={styles.patientPredicted}>Predicted {displayTime}</Text>
-                </View>
-                <View style={styles.patientActions}>
-                  <TouchableOpacity
-                    style={styles.actionCallBtn}
-                    activeOpacity={0.7}
-                    onPress={() => handleCallPatient(item.patient?.phone)}
-                  >
-                    {renderPhoneIcon()}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionCancelBtn}
-                    activeOpacity={0.7}
-                    onPress={() => handleCancelBooking(item._id, item.slotNumber)}
-                  >
-                    {renderCloseIcon()}
-                  </TouchableOpacity>
+
+                {/* Card 2 */}
+                <View style={styles.statCard}>
+                  <View style={[styles.statIconWrapper, { backgroundColor: '#EAFAD1' }]}>{renderCheckCircleIcon()}</View>
+                  <Text style={styles.statValue}>{served}</Text>
+                  <Text style={styles.statLabel}>Served</Text>
                 </View>
               </View>
-            );
-          })
-        ) : (
-          <View style={styles.emptyListCard}>
-            <Text style={styles.emptyListText}>No upcoming bookings for today.</Text>
-          </View>
+
+              <View style={styles.statsRow}>
+                {/* Card 3 */}
+                <View style={styles.statCard}>
+                  <View style={[styles.statIconWrapper, { backgroundColor: COLORS.primaryLight }]}>{renderClockIcon()}</View>
+                  <Text style={styles.statValue}>{avgConsult}m</Text>
+                  <Text style={styles.statLabel}>Avg consult</Text>
+                </View>
+
+                {/* Card 4 */}
+                <View style={styles.statCard}>
+                  <View style={[styles.statIconWrapper, { backgroundColor: '#FDEBD0' }]}>{renderTrendUpIcon()}</View>
+                  <Text style={styles.statValue}>{onTimePercent}</Text>
+                  <Text style={styles.statLabel}>On-time %</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Start Times Row */}
+            <View style={styles.startTimesRow}>
+              <View style={styles.scheduledPill}>
+                {renderCalendarIcon()}
+                <Text style={styles.timeLabel}>SCHEDULED START</Text>
+                <Text style={styles.timeVal}>{scheduledStart}</Text>
+              </View>
+
+              <View style={styles.actualPill}>
+                {renderPlayCircleIcon()}
+                <Text style={[styles.timeLabel, { color: '#27AE60' }]}>ACTUAL START</Text>
+                <Text style={[styles.timeVal, { color: '#27AE60' }]}>{actualStart}</Text>
+              </View>
+            </View>
+
+            {/* Session Call Handler / Now Serving Card */}
+            {actualStart === '--:--' ? (
+              <View style={styles.activateSessionCard}>
+                <View style={styles.activateSessionLeft}>
+                  <Text style={styles.activateSessionLabel}>CLINIC STATUS</Text>
+                  <Text style={styles.activateSessionValue}>Open for Booking</Text>
+                  <Text style={styles.activateSessionDesc}>
+                    {inQueue} patient{inQueue !== 1 ? 's' : ''} in queue. Click below to start the live session in real-time.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.activateSessionBtn}
+                  activeOpacity={0.85}
+                  disabled={activatingRealTime}
+                  onPress={handleActivateRealTime}
+                >
+                  {activatingRealTime ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : (
+                    <Text style={styles.activateSessionBtnText}>Start Calling Now</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.nowServingCard}>
+                <View style={styles.nowServingLeft}>
+                  <Text style={styles.nowServingLabel}>NOW SERVING</Text>
+                  <Text style={styles.nowServingValue} numberOfLines={1}>
+                    #{nowServingSlot} · {nowServingName}
+                  </Text>
+                  <Text style={styles.nowServingPredicted}>
+                    Predicted {nowServingPredicted}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.markServedBtn}
+                  activeOpacity={0.85}
+                  onPress={handleMarkServed}
+                >
+                  <Text style={styles.markServedText}>Mark served</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Upcoming Patients Section Header */}
+            <View style={styles.upcomingHeaderRow}>
+              <Text style={styles.upcomingTitle}>Upcoming patients</Text>
+              <View style={styles.aiPredictionHeader}>
+                {renderSparkleIcon()}
+                <Text style={styles.aiPredictionLabel}>AI-predicted</Text>
+              </View>
+            </View>
+
+            {/* Upcoming Patients List */}
+            {upcomingList.length > 0 ? (
+              upcomingList.map((item, index) => {
+                const patientName = item.patient?.name || `Patient Slot #${item.slotNumber}`;
+                const displayTime = item.predictedServingTime || '--';
+
+                return (
+                  <View key={item._id || index} style={styles.patientListItem}>
+                    <View style={styles.patientBadgeCircle}>
+                      <Text style={styles.patientBadgeText}>{item.slotNumber}</Text>
+                    </View>
+                    <View style={styles.patientInfo}>
+                      <Text style={styles.patientName}>{patientName}</Text>
+                      <Text style={styles.patientPredicted}>Predicted {displayTime}</Text>
+                    </View>
+                    <View style={styles.patientActions}>
+                      <TouchableOpacity
+                        style={styles.actionCallBtn}
+                        activeOpacity={0.7}
+                        onPress={() => handleCallPatient(item.patient?.phone)}
+                      >
+                        {renderPhoneIcon()}
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.actionCancelBtn}
+                        activeOpacity={0.7}
+                        onPress={() => handleCancelBooking(item._id, item.slotNumber)}
+                      >
+                        {renderCloseIcon()}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.emptyListCard}>
+                <Text style={styles.emptyListText}>No upcoming bookings for today.</Text>
+              </View>
+            )}
+
+            {/* End Session Button */}
+            <TouchableOpacity
+              style={styles.endSessionBtn}
+              activeOpacity={0.85}
+              disabled={endingSession}
+              onPress={handleEndSession}
+            >
+              {endingSession ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <Text style={styles.endSessionBtnText}>End Clinic Session</Text>
+              )}
+            </TouchableOpacity>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -645,6 +923,197 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontSize: 14,
     fontWeight: '500',
+  },
+  startSessionCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 28,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    elevation: 3,
+    marginTop: 10,
+  },
+  startSessionHeader: {
+    marginBottom: 16,
+  },
+  startSessionSub: {
+    color: COLORS.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  startSessionTitle: {
+    color: COLORS.textDark,
+    fontSize: 22,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+  startSessionDesc: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: '500',
+    marginBottom: 24,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    color: COLORS.textDark,
+    fontSize: 11,
+    fontWeight: '800',
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  textInput: {
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: COLORS.bgTint,
+    borderWidth: 1.5,
+    borderColor: COLORS.inputBorder,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.textDark,
+  },
+  startBtn: {
+    backgroundColor: '#2ECC71',
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    shadowColor: '#2ECC71',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  startBtnText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  horizontalScroll: {
+    paddingVertical: 4,
+    gap: 8,
+  },
+  timePill: {
+    backgroundColor: COLORS.bgTint,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: COLORS.inputBorder,
+    marginRight: 8,
+  },
+  timePillSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  timePillText: {
+    color: COLORS.textDark,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  timePillTextSelected: {
+    color: COLORS.white,
+  },
+  selectedTimeDisplay: {
+    backgroundColor: COLORS.bgTint,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+  },
+  selectedTimeLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+  },
+  selectedTimeValue: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: COLORS.primaryDark,
+    marginTop: 4,
+  },
+  endSessionBtn: {
+    backgroundColor: COLORS.error,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 32,
+    marginBottom: 16,
+    shadowColor: COLORS.error,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  endSessionBtnText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  activateSessionCard: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 28,
+    padding: 24,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
+    marginBottom: 32,
+  },
+  activateSessionLeft: {
+    marginBottom: 16,
+  },
+  activateSessionLabel: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  activateSessionValue: {
+    color: COLORS.white,
+    fontSize: 24,
+    fontWeight: '900',
+    marginVertical: 4,
+  },
+  activateSessionDesc: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  activateSessionBtn: {
+    backgroundColor: '#2ECC71',
+    borderRadius: 20,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#2ECC71',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  activateSessionBtnText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '800',
   },
 });
 
