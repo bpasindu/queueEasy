@@ -10,7 +10,10 @@ import {
   SafeAreaView,
   Animated,
   Dimensions,
+  Alert,
 } from 'react-native';
+import api from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Logo from '../../components/Logo';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
@@ -53,13 +56,30 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }).start();
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter email and password');
+      return;
+    }
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await api.post('/auth/login', {
+        email: email.trim(),
+        password,
+        role,
+      });
+
+      if (response.data.success) {
+        const token = response.data.data.token;
+        await AsyncStorage.setItem('jwtToken', token);
+        onLoginSuccess(role);
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Login failed. Please try again.';
+      Alert.alert('Login Failed', message);
+    } finally {
       setLoading(false);
-      onLoginSuccess(role);
-    }, 1500);
+    }
   };
 
   // Interpolate slide position

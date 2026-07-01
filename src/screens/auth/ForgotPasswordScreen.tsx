@@ -8,7 +8,9 @@ import {
   Platform,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from 'react-native';
+import api from '../../services/api';
 import Svg, { Path, Circle } from 'react-native-svg';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
@@ -25,14 +27,22 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
-  const handleSendResetLink = () => {
+  const handleSendResetLink = async () => {
     if (!email.trim()) return;
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await api.post('/auth/forgot-password', {
+        email: email.trim(),
+      });
+      if (response.data.success) {
+        setEmailSent(true);
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to send reset link. Please try again.';
+      Alert.alert('Error', message);
+    } finally {
       setLoading(false);
-      setEmailSent(true);
-    }, 1500);
+    }
   };
 
   return (
