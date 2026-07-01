@@ -2,8 +2,9 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Use 10.0.2.2 for Android emulator to access localhost, and localhost for iOS
-const BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
+// Using localhost:3000 to match the backend port.
+// Run 'adb reverse tcp:3000 tcp:3000' so the physical device/emulator can access the backend.
+const BASE_URL = 'http://localhost:3000/api';
 
 const api = axios.create({
   baseURL: BASE_URL,

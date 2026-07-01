@@ -40,8 +40,9 @@ function App() {
     setCurrentScreen(role === 'patient' ? 'patient_dashboard' : 'doctor_dashboard');
   };
 
-  const handleRegisterSuccess = () => {
-    setCurrentScreen('login');
+  const handleRegisterSuccess = (role: 'patient' | 'doctor') => {
+    setUserRole(role);
+    setCurrentScreen(role === 'patient' ? 'patient_dashboard' : 'doctor_dashboard');
   };
 
   const handleLogout = () => {
