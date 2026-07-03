@@ -33,10 +33,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   onLoginSuccess,
 }) => {
   const [role, setRole] = useState<'patient' | 'doctor'>('patient');
-  const [email, setEmail] = useState(
-    role === 'patient' ? 'patient@queueease.lk' : 'doctor@queueease.lk'
-  );
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Animated value for tab sliding
@@ -46,8 +44,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     if (newRole === role) return;
 
     setRole(newRole);
-    // Update email helper based on role for easy testing
-    setEmail(newRole === 'patient' ? 'patient@queueease.lk' : 'doctor@queueease.lk');
+    setEmail('');
+    setPassword('');
 
     Animated.spring(slideAnim, {
       toValue: newRole === 'patient' ? 0 : 1,

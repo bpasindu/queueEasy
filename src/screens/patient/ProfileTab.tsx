@@ -10,18 +10,32 @@ import Svg, { Path } from 'react-native-svg';
 import COLORS from '../../theme/colors';
 
 interface ProfileTabProps {
-  userName: string;
+  userProfile: any;
+  activeBooking: any;
   onLogout: () => void;
   onNavigateToBookingHistory?: () => void;
   onNavigateToHelpSupport?: () => void;
 }
 
 export const ProfileTab: React.FC<ProfileTabProps> = ({
-  userName,
+  userProfile,
+  activeBooking,
   onLogout,
   onNavigateToBookingHistory,
   onNavigateToHelpSupport,
 }) => {
+  const userName = userProfile?.name || 'Patient';
+  const userEmail = userProfile?.email || 'patient@queueease.lk';
+  const userVisits = userProfile?.visits || 0;
+  
+  // Calculate initials dynamically
+  const nameParts = userName.split(' ');
+  const initials = nameParts.length > 1
+    ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+    : userName.slice(0, 2).toUpperCase();
+
+  const currentTurn = activeBooking ? `#${activeBooking.number}` : 'None';
+
   const renderChevronRight = () => (
     <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
       <Path d="M9 5l7 7-7 7" stroke={COLORS.textMuted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -34,19 +48,19 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
 
       <View style={styles.profileHeaderCard}>
         <View style={styles.profileAvatar}>
-          <Text style={styles.profileAvatarText}>NP</Text>
+          <Text style={styles.profileAvatarText}>{initials}</Text>
         </View>
         <Text style={styles.profileNameLarge}>{userName}</Text>
-        <Text style={styles.profileEmail}>nimal.perera@gmail.com</Text>
+        <Text style={styles.profileEmail}>{userEmail}</Text>
 
         <View style={styles.profileStatsRow}>
           <View style={styles.profileStatCol}>
-            <Text style={styles.profileStatNumber}>18</Text>
+            <Text style={styles.profileStatNumber}>{userVisits}</Text>
             <Text style={styles.profileStatLabel}>Visits</Text>
           </View>
           <View style={styles.profileStatDivider} />
           <View style={styles.profileStatCol}>
-            <Text style={styles.profileStatNumber}>#7</Text>
+            <Text style={styles.profileStatNumber}>{currentTurn}</Text>
             <Text style={styles.profileStatLabel}>Current Turn</Text>
           </View>
         </View>

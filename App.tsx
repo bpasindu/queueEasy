@@ -17,6 +17,7 @@ import HomeScreen from './src/screens/patient/HomeScreen';
 import NotificationsScreen from './src/screens/patient/NotificationsScreen';
 import BookingHistoryScreen from './src/screens/patient/BookingHistoryScreen';
 import HelpSupportScreen from './src/screens/patient/HelpSupportScreen';
+import DoctorScreen from './src/screens/doctor/DoctorScreen';
 import Logo from './src/components/Logo';
 import COLORS from './src/theme/colors';
 
@@ -40,8 +41,9 @@ function App() {
     setCurrentScreen(role === 'patient' ? 'patient_dashboard' : 'doctor_dashboard');
   };
 
-  const handleRegisterSuccess = () => {
-    setCurrentScreen('login');
+  const handleRegisterSuccess = (role: 'patient' | 'doctor') => {
+    setUserRole(role);
+    setCurrentScreen(role === 'patient' ? 'patient_dashboard' : 'doctor_dashboard');
   };
 
   const handleLogout = () => {
@@ -103,59 +105,7 @@ function App() {
         );
       case 'doctor_dashboard':
         return (
-          <SafeAreaView style={styles.dashboardContainer}>
-            <ScrollView contentContainerStyle={styles.dashboardContent}>
-              <View style={styles.dashboardHeader}>
-                <Logo size={40} />
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                  <Text style={styles.logoutText}>Sign out</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.welcomeSection}>
-                <Text style={styles.welcomeText}>Dr. Sarah Jenkins</Text>
-                <Text style={styles.subtext}>Cardiology Consultation Room 2</Text>
-              </View>
-
-              <View style={[styles.queueCard, { backgroundColor: COLORS.textDark }]}>
-                <Text style={[styles.cardHeader, { color: COLORS.primary }]}>QUEUE CONTROLLER</Text>
-
-                <View style={styles.ticketContainer}>
-                  <Text style={[styles.ticketLabel, styles.ticketLabelOpacity]}>
-                    Now Serving
-                  </Text>
-                  <Text style={[styles.ticketNumber, styles.ticketNumberColor]}>
-                    #{servingNumber}
-                  </Text>
-                </View>
-
-                <View style={styles.dividerLight} />
-
-                <View style={styles.queueStatusRow}>
-                  <View style={styles.statusCol}>
-                    <Text style={[styles.statusLabel, styles.statusLabelOpacity]}>
-                      Total Booked
-                    </Text>
-                    <Text style={[styles.statusValue, styles.statusValueWhite]}>18 Patients</Text>
-                  </View>
-                  <View style={styles.statusCol}>
-                    <Text style={[styles.statusLabel, styles.statusLabelOpacity]}>
-                      Avg Consult
-                    </Text>
-                    <Text style={[styles.statusValue, styles.statusValuePrimary]}>7.2 mins</Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.advanceButton}
-                  activeOpacity={0.8}
-                  onPress={() => setServingNumber(prev => prev + 1)}
-                >
-                  <Text style={styles.advanceButtonText}>Call Next Patient</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </SafeAreaView>
+          <DoctorScreen onLogout={handleLogout} />
         );
       default:
         return null;

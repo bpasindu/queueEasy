@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,12 +6,16 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import COLORS from '../../theme/colors';
-import { clinics, slotTimes, getWaitMinutes } from './constants';
+import api from '../../services/api';
+import { slotTimes, getWaitMinutes } from './constants';
 
 interface BookTabProps {
+  clinics: any[];
   selectedDoctor: any;
   setSelectedDoctor: (doctor: any) => void;
   selectedSlot: number;
@@ -20,12 +24,78 @@ interface BookTabProps {
 }
 
 export const BookTab: React.FC<BookTabProps> = ({
+  clinics,
   selectedDoctor,
   setSelectedDoctor,
   selectedSlot,
   setSelectedSlot,
   onConfirmBooking,
 }) => {
+  const [slotsList, setSlotsList] = useState<any[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [reserving, setReserving] = useState(false);
+
+  const selectedDoctorId = selectedDoctor?._id || selectedDoctor?.id;
+
+  useEffect(() => {
+    if (selectedDoctorId) {
+      const fetchSlots = async () => {
+        try {
+          setLoadingSlots(true);
+          const response = await api.get(`/bookings/slots/${selectedDoctorId}`);
+          if (response.data.success) {
+            setSlotsList(response.data.slots);
+            
+            if (response.data.clinic) {
+              setSelectedDoctor((prev: any) => ({
+                ...prev,
+                scheduledStart: response.data.clinic.scheduledStart,
+                actualStart: response.data.clinic.actualStart,
+                currentServing: response.data.clinic.currentServing,
+              }));
+            }
+            
+            // Auto-select first available slot if currently selected is taken
+            const activeSelected = response.data.slots.find((s: any) => s.number === selectedSlot);
+            if (!activeSelected || activeSelected.isTaken) {
+              const firstAvailable = response.data.slots.find((s: any) => !s.isTaken);
+              if (firstAvailable) {
+                setSelectedSlot(firstAvailable.number);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching slots:', error);
+          Alert.alert('Error', 'Failed to fetch queue slots. Please try again.');
+        } finally {
+          setLoadingSlots(false);
+        }
+      };
+      fetchSlots();
+    }
+  }, [selectedDoctorId]);
+
+  const handleReserve = async () => {
+    try {
+      setReserving(true);
+      const doctorId = selectedDoctor._id || selectedDoctor.id;
+      const response = await api.post('/bookings/reserve', {
+        clinicId: doctorId,
+        slotNumber: selectedSlot,
+      });
+
+      if (response.data.success) {
+        Alert.alert('Booking Confirmed', `Successfully reserved Slot #${selectedSlot}!`);
+        const bookingData = response.data.data;
+        onConfirmBooking(bookingData.number, bookingData.wait, bookingData.predicted);
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to reserve slot. Please try again.';
+      Alert.alert('Booking Failed', message);
+    } finally {
+      setReserving(false);
+    }
+  };
   // Render SVG icons helper functions
   const renderBackArrowIcon = () => (
     <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -71,33 +141,50 @@ export const BookTab: React.FC<BookTabProps> = ({
           Select your favorite specialist and book a time slot to skip the waiting line.
         </Text>
 
-        {clinics.map(clinic => (
-          <TouchableOpacity
-            key={clinic.id}
-            style={styles.bookingListItem}
-            activeOpacity={0.85}
-            onPress={() => setSelectedDoctor(clinic)}
-          >
-            <View style={styles.bookingListTop}>
-              <View style={styles.clinicImagePlaceholder}>
-                <Text style={styles.clinicInitials}>
-                  {clinic.doctor.split(' ')[1][0]}
-                </Text>
-              </View>
-              <View style={styles.bookingListInfo}>
-                <Text style={styles.bookingDoctorName}>{clinic.doctor}</Text>
-                <Text style={styles.bookingDoctorSpecialty}>{clinic.specialty}</Text>
-                <Text style={styles.bookingDoctorLocation}>{clinic.clinic}</Text>
-              </View>
-            </View>
-            <View style={styles.bookingListBottom}>
-              <Text style={styles.nextAvailableText}>Next available slot: Today, 9:18 AM</Text>
-              <View style={styles.bookingBookBtn}>
-                <Text style={styles.bookingBookBtnText}>Book Now</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+        {clinics.length > 0 ? (
+          clinics.map(clinic => {
+            const doctorName = clinic.doctor || 'Doctor';
+            const initials = doctorName.startsWith('Dr. ') 
+              ? (doctorName.split(' ')[1] ? doctorName.split(' ')[1][0] : doctorName[0]) 
+              : doctorName[0];
+
+            return (
+              <TouchableOpacity
+                key={clinic._id || clinic.id}
+                style={styles.bookingListItem}
+                activeOpacity={0.85}
+                onPress={() => setSelectedDoctor(clinic)}
+              >
+                <View style={styles.bookingListTop}>
+                  <View style={styles.clinicImagePlaceholder}>
+                    <Text style={styles.clinicInitials}>
+                      {initials}
+                    </Text>
+                  </View>
+                  <View style={styles.bookingListInfo}>
+                    <Text style={styles.bookingDoctorName}>{clinic.doctor}</Text>
+                    <Text style={styles.bookingDoctorSpecialty}>{clinic.specialty}</Text>
+                    <Text style={styles.bookingDoctorLocation}>{clinic.clinic}</Text>
+                  </View>
+                </View>
+                <View style={styles.bookingListBottom}>
+                  <Text style={styles.nextAvailableText}>
+                    Next available slot: Today, {clinic.actualStart || clinic.scheduledStart || '9:00 AM'}
+                  </Text>
+                  <View style={styles.bookingBookBtn}>
+                    <Text style={styles.bookingBookBtnText}>Book Now</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        ) : (
+          <View style={{ backgroundColor: COLORS.white, borderRadius: 24, padding: 24, alignItems: 'center', marginTop: 16, borderWidth: 1, borderColor: 'rgba(229, 236, 238, 0.5)' }}>
+            <Text style={{ color: COLORS.textMuted, fontSize: 14, fontWeight: '600', textAlign: 'center', lineHeight: 22 }}>
+              No clinics are currently hosting active sessions. Please try again later once sessions start.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     );
   }
@@ -144,7 +231,7 @@ export const BookTab: React.FC<BookTabProps> = ({
               {renderCalendarIcon()}
               <Text style={styles.scheduledLabelText}>SCHEDULED</Text>
             </View>
-            <Text style={styles.schedActualTime}>9:00 AM</Text>
+            <Text style={styles.schedActualTime}>{selectedDoctor.scheduledStart || '9:00 AM'}</Text>
             <Text style={styles.schedActualDesc}>Doctor's posted start</Text>
           </View>
 
@@ -156,7 +243,7 @@ export const BookTab: React.FC<BookTabProps> = ({
               </Svg>
               <Text style={styles.actualLabelText}>ACTUAL</Text>
             </View>
-            <Text style={styles.schedActualTime}>9:18 AM</Text>
+            <Text style={styles.schedActualTime}>{selectedDoctor.actualStart || '--:--'}</Text>
             <Text style={styles.schedActualDesc}>Session started today</Text>
           </View>
         </View>
@@ -173,66 +260,73 @@ export const BookTab: React.FC<BookTabProps> = ({
         </View>
 
         {/* Numbers Grid */}
-        <View style={styles.slotsGridContainer}>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map(num => {
-            const isTaken = num <= 3;
-            const isSelected = selectedSlot === num;
-            const slotTime = slotTimes[num];
+        {loadingSlots ? (
+          <View style={{ width: '100%', height: 180, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        ) : (
+          <View style={styles.slotsGridContainer}>
+            {slotsList.map(slot => {
+              const isTaken = slot.isTaken;
+              const num = slot.number;
+              const isSelected = selectedSlot === num;
+              const slotTime = slot.time;
 
-            return (
-              <TouchableOpacity
-                key={num}
-                style={[
-                  styles.slotCard,
-                  isTaken && styles.slotCardTaken,
-                  isSelected && styles.slotCardSelected,
-                  !isTaken && !isSelected && styles.slotCardAvailable,
-                ]}
-                disabled={isTaken}
-                onPress={() => setSelectedSlot(num)}
-                activeOpacity={0.7}
-              >
-                <Text
+              return (
+                <TouchableOpacity
+                  key={num}
                   style={[
-                    styles.slotCardNoText,
-                    isTaken && styles.slotCardNoTextTaken,
-                    isSelected && styles.slotCardNoTextSelected,
+                    styles.slotCard,
+                    isTaken && styles.slotCardTaken,
+                    isSelected && styles.slotCardSelected,
+                    !isTaken && !isSelected && styles.slotCardAvailable,
                   ]}
+                  disabled={isTaken}
+                  onPress={() => setSelectedSlot(num)}
+                  activeOpacity={0.7}
                 >
-                  NO.
-                </Text>
+                  <Text
+                    style={[
+                      styles.slotCardNoText,
+                      isTaken && styles.slotCardNoTextTaken,
+                      isSelected && styles.slotCardNoTextSelected,
+                    ]}
+                  >
+                    NO.
+                  </Text>
 
-                <Text
-                  style={[
-                    styles.slotCardNumberText,
-                    isTaken && styles.slotCardNumberTextTaken,
-                    isSelected && styles.slotCardNumberTextSelected,
-                  ]}
-                >
-                  {num}
-                </Text>
+                  <Text
+                    style={[
+                      styles.slotCardNumberText,
+                      isTaken && styles.slotCardNumberTextTaken,
+                      isSelected && styles.slotCardNumberTextSelected,
+                    ]}
+                  >
+                    {num}
+                  </Text>
 
-                <Text
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  style={[
-                    styles.slotCardTimeText,
-                    isTaken && styles.slotCardTimeTextTaken,
-                    isSelected && styles.slotCardTimeTextSelected,
-                  ]}
-                >
-                  {slotTime}
-                </Text>
+                  <Text
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={[
+                      styles.slotCardTimeText,
+                      isTaken && styles.slotCardTimeTextTaken,
+                      isSelected && styles.slotCardTimeTextSelected,
+                    ]}
+                  >
+                    {slotTime}
+                  </Text>
 
-                {isTaken && (
-                  <View style={styles.lockBadgeIcon}>
-                    {renderLockIcon()}
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                  {isTaken && (
+                    <View style={styles.lockBadgeIcon}>
+                      {renderLockIcon()}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         {/* Legend Row */}
         <View style={styles.legendRowContainer}>
@@ -251,31 +345,42 @@ export const BookTab: React.FC<BookTabProps> = ({
         </View>
 
         {/* Random Forest Prediction Alert Card */}
-        <View style={styles.rfPredictionCard}>
-          <View style={styles.rfHeaderRow}>
-            <Svg width="16" height="16" viewBox="0 0 24 24" fill={COLORS.primaryDark} style={styles.iconMargin6}>
-              <Path d="M12 2c0 5.523-4.477 10-10 10 5.523 0 10 4.477 10 10 0-5.523 4.477-10 10-10-5.523 0-10-4.477-10-10z" />
-            </Svg>
-            <Text style={styles.rfTitleText}>Random Forest prediction</Text>
-          </View>
-          <Text style={styles.rfDescriptionText}>
-            Number <Text style={styles.rfBoldText}>#{selectedSlot}</Text> is predicted to be served at{' '}
-            <Text style={styles.rfBoldText}>{slotTimes[selectedSlot]}</Text> — about <Text style={styles.rfBoldText}>{getWaitMinutes(selectedSlot)} min</Text> from now, based on today's consultation pace (6.4m avg).
-          </Text>
-        </View>
+        {(() => {
+          const selectedSlotData = slotsList.find(s => s.number === selectedSlot);
+          const displayTime = selectedSlotData?.time || slotTimes[selectedSlot] || '9:00 AM';
+          const displayWait = selectedSlotData ? selectedSlotData.wait : getWaitMinutes(selectedSlot);
+
+          return (
+            <View style={styles.rfPredictionCard}>
+              <View style={styles.rfHeaderRow}>
+                <Svg width="16" height="16" viewBox="0 0 24 24" fill={COLORS.primaryDark} style={styles.iconMargin6}>
+                  <Path d="M12 2c0 5.523-4.477 10-10 10 5.523 0 10 4.477 10 10 0-5.523 4.477-10 10-10-5.523 0-10-4.477-10-10z" />
+                </Svg>
+                <Text style={styles.rfTitleText}>Random Forest prediction</Text>
+              </View>
+              <Text style={styles.rfDescriptionText}>
+                Number <Text style={styles.rfBoldText}>#{selectedSlot}</Text> is predicted to be served at{' '}
+                <Text style={styles.rfBoldText}>{displayTime}</Text> — about <Text style={styles.rfBoldText}>{displayWait} min</Text> from now, based on today's consultation pace ({selectedDoctor.averageConsultTime || 6.4}m avg).
+              </Text>
+            </View>
+          );
+        })()}
 
         {/* Reservation Button */}
         <TouchableOpacity
           style={styles.reserveBtn}
           activeOpacity={0.8}
-          onPress={() => {
-            const waitTime = getWaitMinutes(selectedSlot);
-            const predictedTime = slotTimes[selectedSlot];
-            onConfirmBooking(selectedSlot, waitTime, predictedTime);
-          }}
+          disabled={reserving}
+          onPress={handleReserve}
         >
-          {renderCheckCircleIcon()}
-          <Text style={styles.reserveBtnText}>Reserve number #{selectedSlot}</Text>
+          {reserving ? (
+            <ActivityIndicator size="small" color={COLORS.white} />
+          ) : (
+            <>
+              {renderCheckCircleIcon()}
+              <Text style={styles.reserveBtnText}>Reserve number #{selectedSlot}</Text>
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

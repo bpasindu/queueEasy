@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,10 +6,11 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import COLORS from '../../theme/colors';
-import { clinics } from './constants';
+import api from '../../services/api';
 import HomeTab from './HomeTab';
 import BookTab from './BookTab';
 import AssistTab from './AssistTab';
@@ -33,17 +34,49 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToHelpSupport,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('Home');
-  const [selectedDoctor, setSelectedDoctor] = useState<any>(clinics[0]); // Default to Dr. Silva
-  const [selectedSlot, setSelectedSlot] = useState<number>(4); // Default to #4
+  const [clinicsList, setClinicsList] = useState<any[]>([]);
+  const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
+  const [selectedSlot, setSelectedSlot] = useState<number>(4);
+  const [activeBooking, setActiveBooking] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
-  // Interactive state for testing
-  const [activeBooking, setActiveBooking] = useState({
-    number: 7,
-    wait: 26,
-    predicted: '9:56.400000000000009 AM',
-    started: '9:18 AM',
-    live: true,
-  });
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const clinicsRes = await api.get('/clinics');
+      if (clinicsRes.data.success) {
+        setClinicsList(clinicsRes.data.data);
+        if (clinicsRes.data.data.length > 0 && !selectedDoctor) {
+          setSelectedDoctor(clinicsRes.data.data[0]);
+        }
+      }
+
+      const activeRes = await api.get('/bookings/active');
+      if (activeRes.data.success) {
+        setActiveBooking(activeRes.data.hasActiveBooking ? activeRes.data.data : null);
+      } else {
+        setActiveBooking(null);
+      }
+
+      try {
+        const profileRes = await api.get('/auth/profile');
+        if (profileRes.data.success) {
+          setUserProfile(profileRes.data.user);
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
   // Bottom Navigation Icons rendering
   const renderTabIcon = (tab: TabType, isActive: boolean) => {
@@ -125,14 +158,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   const renderActiveTabContent = () => {
+    if (loading && clinicsList.length === 0) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      );
+    }
+
     switch (activeTab) {
       case 'Home':
         return (
           <HomeTab
-            userName={userName}
+            userName={userProfile?.name || userName}
             activeBooking={activeBooking}
+            clinics={clinicsList}
             onBookSlotPress={() => {
-              setSelectedDoctor(clinics[0]);
+              setSelectedDoctor(clinicsList.length > 0 ? clinicsList[0] : null);
               setActiveTab('Book');
             }}
             onClinicCardPress={(clinic) => {
@@ -140,23 +182,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               setActiveTab('Book');
             }}
             onNavigateToNotifications={onNavigateToNotifications}
+            onSeeAllPress={() => {
+              setSelectedDoctor(null);
+              setActiveTab('Book');
+            }}
+            refreshBooking={fetchDashboardData}
           />
         );
       case 'Book':
         return (
           <BookTab
+            clinics={clinicsList}
             selectedDoctor={selectedDoctor}
             setSelectedDoctor={setSelectedDoctor}
             selectedSlot={selectedSlot}
             setSelectedSlot={setSelectedSlot}
-            onConfirmBooking={(slot, wait, predicted) => {
-              setActiveBooking({
-                number: slot,
-                wait: wait,
-                predicted: predicted,
-                started: '9:18 AM',
-                live: true,
-              });
+            onConfirmBooking={async (slot, wait, predicted) => {
+              await fetchDashboardData();
               setActiveTab('Home');
             }}
           />
@@ -166,7 +208,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       case 'Profile':
         return (
           <ProfileTab
-            userName={userName}
+            userProfile={userProfile}
+            activeBooking={activeBooking}
             onLogout={onLogout}
             onNavigateToBookingHistory={onNavigateToBookingHistory}
             onNavigateToHelpSupport={onNavigateToHelpSupport}
