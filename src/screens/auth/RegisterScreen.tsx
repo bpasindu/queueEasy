@@ -8,7 +8,10 @@ import {
   Platform,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from 'react-native';
+import api from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
 import Logo from '../../components/Logo';
 import CustomInput from '../../components/CustomInput';
@@ -17,7 +20,7 @@ import COLORS from '../../theme/colors';
 
 interface RegisterScreenProps {
   onNavigateToLogin: () => void;
-  onRegisterSuccess: () => void;
+  onRegisterSuccess: (role: 'patient' | 'doctor') => void;
 }
 
 export const RegisterScreen: React.FC<RegisterScreenProps> = ({
@@ -28,15 +31,36 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'patient' | 'doctor'>('patient');
   const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
+    if (!name || !email || !phone || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
     setLoading(true);
-    // Simulate API registration call
-    setTimeout(() => {
+    try {
+      const response = await api.post('/auth/register', {
+        name,
+        email: email.trim(),
+        phone,
+        password,
+        role,
+      });
+      if (response.data.success) {
+        const token = response.data.data.token;
+        if (token) {
+          await AsyncStorage.setItem('jwtToken', token);
+        }
+        onRegisterSuccess(role);
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Registration failed. Please try again.';
+      Alert.alert('Registration Failed', message);
+    } finally {
       setLoading(false);
-      onRegisterSuccess();
-    }, 1500);
+    }
   };
 
   return (
@@ -85,6 +109,44 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
           {/* Input Fields */}
           <View style={styles.formContainer}>
+            {/* Custom Tab Switcher (Segmented Control) for Role Selection */}
+            <View style={styles.roleContainer}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setRole('patient')}
+                style={[
+                  styles.roleButton,
+                  role === 'patient' && styles.activeRoleButton,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.roleText,
+                    role === 'patient' && styles.activeRoleText,
+                  ]}
+                >
+                  Patient
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setRole('doctor')}
+                style={[
+                  styles.roleButton,
+                  role === 'doctor' && styles.activeRoleButton,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.roleText,
+                    role === 'doctor' && styles.activeRoleText,
+                  ]}
+                >
+                  Doctor / Staff
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <CustomInput
               iconType="user"
               placeholder="Full name"
@@ -202,6 +264,37 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
+  },
+  roleContainer: {
+    flexDirection: 'row',
+    height: 52,
+    backgroundColor: COLORS.bgTabContainer,
+    borderRadius: 26,
+    padding: 4,
+    marginBottom: 24,
+  },
+  roleButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 22,
+  },
+  activeRoleButton: {
+    backgroundColor: COLORS.bgTabActive,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  roleText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  activeRoleText: {
+    color: COLORS.textDark,
+    fontWeight: '700',
   },
   footerContainer: {
     flexDirection: 'row',

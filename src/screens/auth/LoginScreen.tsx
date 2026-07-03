@@ -10,7 +10,10 @@ import {
   SafeAreaView,
   Animated,
   Dimensions,
+  Alert,
 } from 'react-native';
+import api from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Logo from '../../components/Logo';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
@@ -18,6 +21,7 @@ import COLORS from '../../theme/colors';
 
 interface LoginScreenProps {
   onNavigateToRegister: () => void;
+  onNavigateToForgotPassword?: () => void;
   onLoginSuccess: (role: 'patient' | 'doctor') => void;
 }
 
@@ -25,13 +29,12 @@ const { width } = Dimensions.get('window');
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onNavigateToRegister,
+  onNavigateToForgotPassword,
   onLoginSuccess,
 }) => {
   const [role, setRole] = useState<'patient' | 'doctor'>('patient');
-  const [email, setEmail] = useState(
-    role === 'patient' ? 'patient@queueease.lk' : 'doctor@queueease.lk'
-  );
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Animated value for tab sliding
@@ -41,8 +44,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     if (newRole === role) return;
 
     setRole(newRole);
-    // Update email helper based on role for easy testing
-    setEmail(newRole === 'patient' ? 'patient@queueease.lk' : 'doctor@queueease.lk');
+    setEmail('');
+    setPassword('');
 
     Animated.spring(slideAnim, {
       toValue: newRole === 'patient' ? 0 : 1,
@@ -51,13 +54,30 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }).start();
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter email and password');
+      return;
+    }
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await api.post('/auth/login', {
+        email: email.trim(),
+        password,
+        role,
+      });
+
+      if (response.data.success) {
+        const token = response.data.data.token;
+        await AsyncStorage.setItem('jwtToken', token);
+        onLoginSuccess(role);
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Login failed. Please try again.';
+      Alert.alert('Login Failed', message);
+    } finally {
       setLoading(false);
-      onLoginSuccess(role);
-    }, 1500);
+    }
   };
 
   // Interpolate slide position
@@ -168,7 +188,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             />
 
             {/* Forgot Password Link */}
-            <TouchableOpacity activeOpacity={0.6} style={styles.forgotContainer}>
+            <TouchableOpacity activeOpacity={0.6} style={styles.forgotContainer} onPress={onNavigateToForgotPassword}>
               <Text style={styles.forgotText}>Forgot password?</Text>
             </TouchableOpacity>
           </View>

@@ -1,30 +1,3 @@
-export const clinics = [
-  {
-    id: 1,
-    doctor: 'Dr. Silva',
-    specialty: 'General Physician',
-    clinic: 'Nugegoda Clinic',
-    inQueue: 5,
-    eta: 18,
-  },
-  {
-    id: 2,
-    doctor: 'Dr. Fernando',
-    specialty: 'Pediatrician',
-    clinic: 'Maharagama Medical',
-    inQueue: 12,
-    eta: 32,
-  },
-  {
-    id: 3,
-    doctor: 'Dr. Jayasinghe',
-    specialty: 'ENT',
-    clinic: 'Colombo 05',
-    inQueue: 3,
-    eta: 12,
-  },
-];
-
 export const slotTimes = [
   "", // 0 index dummy
   "9:18 AM",
