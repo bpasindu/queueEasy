@@ -164,7 +164,7 @@ export const DoctorScreen: React.FC<DoctorScreenProps> = ({ onLogout }) => {
     try {
       setStartingSession(true);
       const response = await api.post('/doctor/start-session', {
-        actualStart: startTime,
+        scheduledStart: startTime,
         maxPatients: parseInt(maxPatients, 10),
       });
 
@@ -479,7 +479,7 @@ export const DoctorScreen: React.FC<DoctorScreenProps> = ({ onLogout }) => {
               {startingSession ? (
                 <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
-                <Text style={styles.startBtnText}>Start Session &amp; Open Queue</Text>
+                <Text style={styles.startBtnText}>Place Session</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -554,7 +554,7 @@ export const DoctorScreen: React.FC<DoctorScreenProps> = ({ onLogout }) => {
                   {activatingRealTime ? (
                     <ActivityIndicator size="small" color={COLORS.white} />
                   ) : (
-                    <Text style={styles.activateSessionBtnText}>Start Calling Now</Text>
+                    <Text style={styles.activateSessionBtnText}>Start Session</Text>
                   )}
                 </TouchableOpacity>
               </View>

@@ -35,15 +35,25 @@ export const BookTab: React.FC<BookTabProps> = ({
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [reserving, setReserving] = useState(false);
 
+  const selectedDoctorId = selectedDoctor?._id || selectedDoctor?.id;
+
   useEffect(() => {
-    if (selectedDoctor) {
+    if (selectedDoctorId) {
       const fetchSlots = async () => {
         try {
           setLoadingSlots(true);
-          const doctorId = selectedDoctor._id || selectedDoctor.id;
-          const response = await api.get(`/bookings/slots/${doctorId}`);
+          const response = await api.get(`/bookings/slots/${selectedDoctorId}`);
           if (response.data.success) {
             setSlotsList(response.data.slots);
+            
+            if (response.data.clinic) {
+              setSelectedDoctor((prev: any) => ({
+                ...prev,
+                scheduledStart: response.data.clinic.scheduledStart,
+                actualStart: response.data.clinic.actualStart,
+                currentServing: response.data.clinic.currentServing,
+              }));
+            }
             
             // Auto-select first available slot if currently selected is taken
             const activeSelected = response.data.slots.find((s: any) => s.number === selectedSlot);
@@ -63,7 +73,7 @@ export const BookTab: React.FC<BookTabProps> = ({
       };
       fetchSlots();
     }
-  }, [selectedDoctor]);
+  }, [selectedDoctorId]);
 
   const handleReserve = async () => {
     try {
@@ -221,7 +231,7 @@ export const BookTab: React.FC<BookTabProps> = ({
               {renderCalendarIcon()}
               <Text style={styles.scheduledLabelText}>SCHEDULED</Text>
             </View>
-            <Text style={styles.schedActualTime}>9:00 AM</Text>
+            <Text style={styles.schedActualTime}>{selectedDoctor.scheduledStart || '9:00 AM'}</Text>
             <Text style={styles.schedActualDesc}>Doctor's posted start</Text>
           </View>
 
@@ -233,7 +243,7 @@ export const BookTab: React.FC<BookTabProps> = ({
               </Svg>
               <Text style={styles.actualLabelText}>ACTUAL</Text>
             </View>
-            <Text style={styles.schedActualTime}>9:18 AM</Text>
+            <Text style={styles.schedActualTime}>{selectedDoctor.actualStart || '--:--'}</Text>
             <Text style={styles.schedActualDesc}>Session started today</Text>
           </View>
         </View>
