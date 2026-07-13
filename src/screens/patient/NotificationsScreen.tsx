@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,9 +7,11 @@ import {
   ScrollView,
   SafeAreaView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import COLORS from '../../theme/colors';
+import api from '../../services/api';
 
 interface Notification {
   id: string;
@@ -20,56 +22,6 @@ interface Notification {
   unread: boolean;
 }
 
-const SAMPLE_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'next',
-    title: "You're next — #5",
-    body: 'Dr. Silva is calling number 4. Please be ready at the clinic.',
-    time: 'Just now',
-    unread: true,
-  },
-  {
-    id: '2',
-    type: 'delay',
-    title: 'Doctor running 18 min late',
-    body: "Dr. Silva's session started at 9:18 AM. Updated AI estimate sent.",
-    time: '12 min ago',
-    unread: true,
-  },
-  {
-    id: '3',
-    type: 'confirmed',
-    title: 'Booking confirmed — #5',
-    body: 'Predicted call time 9:54 AM at Nugegoda Clinic.',
-    time: '1 h ago',
-    unread: false,
-  },
-  {
-    id: '4',
-    type: 'reminder',
-    title: 'Reminder: appointment tomorrow',
-    body: 'Dr. Fernando, Pediatrician — Maharagama Medical.',
-    time: 'Yesterday',
-    unread: false,
-  },
-  {
-    id: '5',
-    type: 'cancelled',
-    title: 'Session cancelled',
-    body: "Dr. Jayasinghe's evening session was cancelled. Tap to rebook.",
-    time: '2 d ago',
-    unread: false,
-  },
-  {
-    id: '6',
-    type: 'newclinic',
-    title: 'New clinic near you',
-    body: 'Colombo Family Care just joined QueueEase.',
-    time: '3 d ago',
-    unread: false,
-  },
-];
 
 const NotificationIcon: React.FC<{ type: Notification['type'] }> = ({ type }) => {
   const iconConfigs: Record<
@@ -189,11 +141,121 @@ interface NotificationsScreenProps {
 }
 
 export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onBack }) => {
-  const [notifications, setNotifications] = useState<Notification[]>(SAMPLE_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await api.get('/bookings/my-bookings');
+      if (response.data.success) {
+        const generatedNotifs: Notification[] = [];
+        
+        response.data.data.forEach((b: any) => {
+          // Calculate relative timestamp based on createdAt
+          const createdDate = new Date(b.createdAt);
+          const timeDiff = Date.now() - createdDate.getTime();
+          const minutesDiff = Math.max(1, Math.round(timeDiff / (1000 * 60)));
+          let timeStr = `${minutesDiff}m ago`;
+          if (minutesDiff >= 60) {
+            const hoursDiff = Math.floor(minutesDiff / 60);
+            timeStr = `${hoursDiff}h ago`;
+            if (hoursDiff >= 24) {
+              timeStr = `${Math.floor(hoursDiff / 24)}d ago`;
+            }
+          }
+
+          // 1. Confirmed Booking Notification
+          if (b.status === 'pending' || b.status === 'called' || b.status === 'completed') {
+            generatedNotifs.push({
+              id: `${b._id}-confirmed`,
+              type: 'confirmed',
+              title: `Booking confirmed — #${b.number}`,
+              body: `Predicted call time ${b.predicted} for Dr. ${b.clinic?.doctor || 'Silva'} at ${b.clinic?.clinic || 'Nugegoda Clinic'}.`,
+              time: timeStr,
+              unread: false,
+            });
+          }
+
+          // 2. Doctor Started Session Notification
+          if (b.started && b.started !== '--:--') {
+            generatedNotifs.push({
+              id: `${b._id}-started`,
+              type: 'delay',
+              title: `Session started`,
+              body: `Dr. ${b.clinic?.doctor || 'Silva'}'s session started at ${b.started}.`,
+              time: 'Live',
+              unread: true,
+            });
+          }
+
+          // 3. You're Next Notification (If doctor is serving slot number - 1)
+          if (b.status === 'pending' && b.clinic && b.clinic.currentServing === b.number - 1) {
+            generatedNotifs.push({
+              id: `${b._id}-next`,
+              type: 'next',
+              title: `You're next — #${b.number}`,
+              body: `Dr. ${b.clinic.doctor} is serving number ${b.clinic.currentServing}. Please be ready at the clinic.`,
+              time: 'Just now',
+              unread: true,
+            });
+          }
+
+          // 4. Completed Notification
+          if (b.status === 'completed') {
+            generatedNotifs.push({
+              id: `${b._id}-completed`,
+              type: 'reminder',
+              title: `Appointment completed`,
+              body: `You have successfully completed your consultation with Dr. ${b.clinic?.doctor || 'Silva'}.`,
+              time: timeStr,
+              unread: false,
+            });
+          }
+
+          // 5. Cancelled Notification
+          if (b.status === 'cancelled') {
+            generatedNotifs.push({
+              id: `${b._id}-cancelled`,
+              type: 'cancelled',
+              title: `Booking cancelled`,
+              body: `Your booking #${b.number} for Dr. ${b.clinic?.doctor || 'Silva'} was cancelled.`,
+              time: timeStr,
+              unread: false,
+            });
+          }
+        });
+
+        // Sort notifications to place unread first
+        generatedNotifs.sort((a, b) => {
+          if (a.unread && !b.unread) return -1;
+          if (!a.unread && b.unread) return 1;
+          return 0;
+        });
+
+        setNotifications(generatedNotifs);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
   const handleMarkAllRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -221,23 +283,29 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onBack
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {notifications.map(notif => (
-          <TouchableOpacity
-            key={notif.id}
-            activeOpacity={0.7}
-            style={[styles.notifCard, notif.unread && styles.notifCardUnread]}
-          >
-            <NotificationIcon type={notif.type} />
+        {notifications.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No notifications yet.</Text>
+          </View>
+        ) : (
+          notifications.map(notif => (
+            <TouchableOpacity
+              key={notif.id}
+              activeOpacity={0.7}
+              style={[styles.notifCard, notif.unread && styles.notifCardUnread]}
+            >
+              <NotificationIcon type={notif.type} />
 
-            <View style={styles.notifBody}>
-              <Text style={styles.notifTitle}>{notif.title}</Text>
-              <Text style={styles.notifSubtext}>{notif.body}</Text>
-              <Text style={styles.notifTime}>{notif.time}</Text>
-            </View>
+              <View style={styles.notifBody}>
+                <Text style={styles.notifTitle}>{notif.title}</Text>
+                <Text style={styles.notifSubtext}>{notif.body}</Text>
+                <Text style={styles.notifTime}>{notif.time}</Text>
+              </View>
 
-            {notif.unread && <View style={styles.unreadDot} />}
-          </TouchableOpacity>
-        ))}
+              {notif.unread && <View style={styles.unreadDot} />}
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -335,6 +403,23 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginLeft: 8,
     flexShrink: 0,
+  },
+  emptyContainer: {
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 40,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.bgTint,
   },
 });
 
