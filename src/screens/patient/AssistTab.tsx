@@ -7,35 +7,43 @@ import {
   ScrollView,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import COLORS from '../../theme/colors';
+import api from '../../services/api';
 
 export const AssistTab: React.FC = () => {
   const [assistMessages, setAssistMessages] = useState<Array<{ id: number; text: string; sender: 'user' | 'bot' }>>([
     { id: 1, text: "Hello! I am your QueueEase assistant. How can I help you today?", sender: 'bot' },
-    { id: 2, text: "Can you tell me how many people are in queue for Dr. Silva?", sender: 'user' },
-    { id: 3, text: "Dr. Silva currently has 5 patients in the queue. The estimated waiting time is approximately 18 minutes.", sender: 'bot' },
   ]);
 
   const [inputText, setInputText] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSendMessage = () => {
-    if (!inputText.trim()) return;
-    const newMsg = { id: Date.now(), text: inputText, sender: 'user' as const };
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || loading) return;
+    const userText = inputText.trim();
+    const newMsg = { id: Date.now(), text: userText, sender: 'user' as const };
     setAssistMessages(prev => [...prev, newMsg]);
     setInputText('');
+    setLoading(true);
 
-    // Simulated reply
-    setTimeout(() => {
-      setAssistMessages(prev => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          text: "I am currently monitoring the status. Your slot is active. Feel free to navigate around the app!",
-          sender: 'bot' as const,
-        },
-      ]);
-    }, 1000);
+    const tempBotId = Date.now() + 1;
+    setAssistMessages(prev => [...prev, { id: tempBotId, text: 'Typing...', sender: 'bot' as const }]);
+
+    try {
+      const response = await api.post('/assistant/chat', { message: userText });
+      if (response.data.success) {
+        setAssistMessages(prev => prev.map(m => m.id === tempBotId ? { ...m, text: response.data.reply } : m));
+      } else {
+        setAssistMessages(prev => prev.map(m => m.id === tempBotId ? { ...m, text: 'Sorry, I encountered an error. Please try again.' } : m));
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setAssistMessages(prev => prev.map(m => m.id === tempBotId ? { ...m, text: 'Failed to reach the AI Assistant. Please check your connection.' } : m));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
