@@ -48,6 +48,14 @@ export const AssistTab: React.FC = () => {
     }
   };
 
+  const formatMessageText = (text: string) => {
+    // Remove bold markdown asterisks (e.g. **Text** -> Text)
+    let cleaned = text.replace(/\*\*/g, '');
+    // Replace list/bullet asterisks at the beginning of a line with unicode bullets
+    cleaned = cleaned.replace(/^\s*\*\s+/gm, '• ');
+    return cleaned;
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -81,7 +89,7 @@ export const AssistTab: React.FC = () => {
                 msg.sender === 'user' ? styles.userChatText : styles.botChatText,
               ]}
             >
-              {msg.text}
+              {formatMessageText(msg.text)}
             </Text>
           </View>
         ))}
