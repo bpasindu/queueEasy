@@ -12,6 +12,7 @@ import {
   Linking,
   RefreshControl,
   TextInput,
+  Modal,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import COLORS from '../../theme/colors';
@@ -66,6 +67,51 @@ export const DoctorScreen: React.FC<DoctorScreenProps> = ({ onLogout }) => {
   const [startingSession, setStartingSession] = useState(false);
   const [endingSession, setEndingSession] = useState(false);
   const [activatingRealTime, setActivatingRealTime] = useState(false);
+
+  // Dropdown & Edit Modal States
+  const [showMenu, setShowMenu] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editDoctorName, setEditDoctorName] = useState('');
+  const [editSpecialty, setEditSpecialty] = useState('');
+  const [editClinicName, setEditClinicName] = useState('');
+  const [updatingDetails, setUpdatingDetails] = useState(false);
+
+  const handleOpenEditModal = () => {
+    setEditDoctorName(doctorName);
+    setEditSpecialty(specialty);
+    setEditClinicName(clinicName);
+    setShowMenu(false);
+    setShowEditModal(true);
+  };
+
+  const handleSaveDetails = async () => {
+    if (!editDoctorName.trim() || !editSpecialty.trim() || !editClinicName.trim()) {
+      Alert.alert('Error', 'Please fill in all details');
+      return;
+    }
+    
+    try {
+      setUpdatingDetails(true);
+      const response = await api.put('/doctor/update-details', {
+        doctor: editDoctorName.trim(),
+        specialty: editSpecialty.trim(),
+        clinicName: editClinicName.trim(),
+      });
+      
+      if (response.data.success) {
+        setDoctorName(editDoctorName.trim());
+        setSpecialty(editSpecialty.trim());
+        setClinicName(editClinicName.trim());
+        setShowEditModal(false);
+        Alert.alert('Success', 'Profile details updated successfully!');
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to update details. Please try again.';
+      Alert.alert('Error', message);
+    } finally {
+      setUpdatingDetails(false);
+    }
+  };
 
   // Generate valid hours within next 11 hours
   const generateUpcomingHours = () => {
@@ -364,12 +410,33 @@ export const DoctorScreen: React.FC<DoctorScreenProps> = ({ onLogout }) => {
         </View>
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={onLogout}
+          onPress={() => setShowMenu(!showMenu)}
           style={styles.menuButton}
         >
           {renderMenuIcon()}
         </TouchableOpacity>
       </View>
+
+      {/* Hamburger Dropdown Menu */}
+      {showMenu && (
+        <View style={styles.dropdownMenu}>
+          <TouchableOpacity 
+            style={styles.dropdownItem} 
+            onPress={handleOpenEditModal}
+          >
+            <Text style={styles.dropdownText}>Edit Details</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.dropdownItem, styles.dropdownItemLast]} 
+            onPress={() => {
+              setShowMenu(false);
+              onLogout();
+            }}
+          >
+            <Text style={[styles.dropdownText, styles.dropdownTextDestructive]}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -644,6 +711,78 @@ export const DoctorScreen: React.FC<DoctorScreenProps> = ({ onLogout }) => {
           </>
         )}
       </ScrollView>
+
+      {/* Edit Doctor Details Modal */}
+      <Modal
+        visible={showEditModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Profile Details</Text>
+              <Text style={styles.modalSubtitle}>Update your clinic credentials</Text>
+            </View>
+
+            <View style={styles.modalInputGroup}>
+              <Text style={styles.modalInputLabel}>DOCTOR NAME</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                value={editDoctorName}
+                onChangeText={setEditDoctorName}
+                placeholder="e.g. Dr. Silva"
+                placeholderTextColor={COLORS.textLight}
+              />
+            </View>
+
+            <View style={styles.modalInputGroup}>
+              <Text style={styles.modalInputLabel}>CLINIC TYPE / SPECIALTY</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                value={editSpecialty}
+                onChangeText={setEditSpecialty}
+                placeholder="e.g. General Physician"
+                placeholderTextColor={COLORS.textLight}
+              />
+            </View>
+
+            <View style={styles.modalInputGroup}>
+              <Text style={styles.modalInputLabel}>CLINIC LOCATION / ROOM</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                value={editClinicName}
+                onChangeText={setEditClinicName}
+                placeholder="e.g. Consultation Suite Room 1"
+                placeholderTextColor={COLORS.textLight}
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setShowEditModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnSave]}
+                onPress={handleSaveDetails}
+                disabled={updatingDetails}
+                activeOpacity={0.8}
+              >
+                {updatingDetails ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : (
+                  <Text style={styles.modalBtnSaveText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1114,6 +1253,121 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 15,
     fontWeight: '800',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 74 : 86,
+    right: 24,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+    width: 160,
+    zIndex: 1000,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(229, 236, 238, 0.6)',
+  },
+  dropdownItemLast: {
+    borderBottomWidth: 0,
+  },
+  dropdownText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textDark,
+  },
+  dropdownTextDestructive: {
+    color: COLORS.error,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(11, 44, 61, 0.4)',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: COLORS.white,
+    borderRadius: 28,
+    padding: 24,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  modalHeader: {
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '950',
+    color: COLORS.textDark,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  modalInputGroup: {
+    marginBottom: 16,
+  },
+  modalInputLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.textDark,
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  modalTextInput: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: COLORS.bgTint,
+    borderWidth: 1.5,
+    borderColor: COLORS.inputBorder,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: COLORS.textDark,
+    fontWeight: '600',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+  },
+  modalBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBtnCancel: {
+    backgroundColor: COLORS.bgTint,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+  },
+  modalBtnCancelText: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalBtnSave: {
+    backgroundColor: COLORS.primary,
+  },
+  modalBtnSaveText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 

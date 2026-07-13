@@ -200,31 +200,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               </View>
             </View>
           </TouchableOpacity>
-        ) : (
-          <View style={styles.activeBookingCard}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardHeaderTitle}>NO ACTIVE BOOKINGS</Text>
-            </View>
-            <Text style={{ color: COLORS.white, fontSize: 15, fontWeight: '600', marginVertical: 8, lineHeight: 22 }}>
-              You don't have any active clinic queues right now.
-            </Text>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={onBookSlotPress}
-              style={{
-                backgroundColor: COLORS.white,
-                borderRadius: 16,
-                paddingVertical: 10,
-                alignItems: 'center',
-                marginTop: 8,
-              }}
-            >
-              <Text style={{ color: COLORS.primary, fontWeight: '700', fontSize: 14 }}>
-                Book a Slot Now
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        ) : null}
       </View>
 
       {/* Quick Actions Grid */}

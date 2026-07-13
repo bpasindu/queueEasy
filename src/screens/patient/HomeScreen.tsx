@@ -4,10 +4,11 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import COLORS from '../../theme/colors';
 import api from '../../services/api';
@@ -19,9 +20,13 @@ import ProfileTab from './ProfileTab';
 interface HomeScreenProps {
   onLogout: () => void;
   userName?: string;
+  initialTab?: TabType;
   onNavigateToNotifications?: () => void;
   onNavigateToBookingHistory?: () => void;
   onNavigateToHelpSupport?: () => void;
+  onNavigateToPersonalDetails?: () => void;
+  onNavigateToInsuranceInfo?: () => void;
+  onNavigateToNotificationSettings?: () => void;
 }
 
 type TabType = 'Home' | 'Book' | 'Assist' | 'Profile';
@@ -29,17 +34,28 @@ type TabType = 'Home' | 'Book' | 'Assist' | 'Profile';
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onLogout,
   userName = 'Nimal Perera',
+  initialTab,
   onNavigateToNotifications,
   onNavigateToBookingHistory,
   onNavigateToHelpSupport,
+  onNavigateToPersonalDetails,
+  onNavigateToInsuranceInfo,
+  onNavigateToNotificationSettings,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('Home');
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'Home');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [clinicsList, setClinicsList] = useState<any[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<number>(4);
   const [activeBooking, setActiveBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
@@ -76,6 +92,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   useEffect(() => {
     fetchDashboardData();
+
+    // Listen to keyboard show/hide events
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
   }, []);
 
   // Bottom Navigation Icons rendering
@@ -213,6 +244,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             onLogout={onLogout}
             onNavigateToBookingHistory={onNavigateToBookingHistory}
             onNavigateToHelpSupport={onNavigateToHelpSupport}
+            onNavigateToPersonalDetails={onNavigateToPersonalDetails}
+            onNavigateToInsuranceInfo={onNavigateToInsuranceInfo}
+            onNavigateToNotificationSettings={onNavigateToNotificationSettings}
           />
         );
     }
@@ -226,29 +260,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </View>
 
       {/* Custom Bottom Tab Bar */}
-      <View style={styles.tabBar}>
-        {(['Home', 'Book', 'Assist', 'Profile'] as TabType[]).map(tab => {
-          const isActive = activeTab === tab;
-          return (
-            <TouchableOpacity
-              key={tab}
-              style={styles.tabItem}
-              onPress={() => setActiveTab(tab)}
-              activeOpacity={0.7}
-            >
-              {renderTabIcon(tab, isActive)}
-              <Text
-                style={[
-                  styles.tabItemText,
-                  isActive && styles.activeTabItemText,
-                ]}
+      {!isKeyboardVisible && (
+        <View style={styles.tabBar}>
+          {(['Home', 'Book', 'Assist', 'Profile'] as TabType[]).map(tab => {
+            const isActive = activeTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                style={styles.tabItem}
+                onPress={() => setActiveTab(tab)}
+                activeOpacity={0.7}
               >
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                {renderTabIcon(tab, isActive)}
+                <Text
+                  style={[
+                    styles.tabItemText,
+                    isActive && styles.activeTabItemText,
+                  ]}
+                >
+                  {tab}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
     </SafeAreaView>
   );
 };
