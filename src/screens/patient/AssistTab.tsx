@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,6 +8,7 @@ import {
   TextInput,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 import COLORS from '../../theme/colors';
 import api from '../../services/api';
@@ -19,6 +20,7 @@ export const AssistTab: React.FC = () => {
 
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || loading) return;
@@ -47,15 +49,23 @@ export const AssistTab: React.FC = () => {
   };
 
   return (
-    <View style={styles.assistTabContainer}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.assistTabContainer}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 44 : 24}
+    >
       <View style={styles.assistHeader}>
         <Text style={styles.assistTitle}>AI Queue Assistant</Text>
         <Text style={styles.assistSubtitle}>Ask anything about live clinic waiting times</Text>
       </View>
+      
       <ScrollView
+        ref={scrollViewRef}
         style={styles.assistChatScroll}
         contentContainerStyle={styles.assistChatContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
       >
         {assistMessages.map(msg => (
           <View
@@ -76,6 +86,7 @@ export const AssistTab: React.FC = () => {
           </View>
         ))}
       </ScrollView>
+      
       <View style={styles.assistInputArea}>
         <View style={styles.assistInputWrapper}>
           <TextInput
@@ -84,6 +95,8 @@ export const AssistTab: React.FC = () => {
             onChangeText={setInputText}
             placeholder="Type a message..."
             placeholderTextColor={COLORS.textLight}
+            multiline={true}
+            maxHeight={100}
           />
           <TouchableOpacity
             style={styles.assistSendBtn}
@@ -94,7 +107,7 @@ export const AssistTab: React.FC = () => {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -157,19 +170,22 @@ const styles = StyleSheet.create({
   },
   assistInputWrapper: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: COLORS.inputBorder,
     borderRadius: 24,
     paddingLeft: 16,
     paddingRight: 6,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: Platform.OS === 'ios' ? 6 : 0,
   },
   textInput: {
     flex: 1,
     color: COLORS.textDark,
     fontSize: 14,
+    paddingTop: Platform.OS === 'ios' ? 8 : 6,
+    paddingBottom: Platform.OS === 'ios' ? 8 : 6,
   },
   assistSendBtn: {
     backgroundColor: COLORS.primary,
@@ -178,6 +194,7 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 5,
   },
   assistSendText: {
     color: COLORS.white,
