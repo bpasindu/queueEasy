@@ -20,9 +20,13 @@ import ProfileTab from './ProfileTab';
 interface HomeScreenProps {
   onLogout: () => void;
   userName?: string;
+  initialTab?: TabType;
   onNavigateToNotifications?: () => void;
   onNavigateToBookingHistory?: () => void;
   onNavigateToHelpSupport?: () => void;
+  onNavigateToPersonalDetails?: () => void;
+  onNavigateToInsuranceInfo?: () => void;
+  onNavigateToNotificationSettings?: () => void;
 }
 
 type TabType = 'Home' | 'Book' | 'Assist' | 'Profile';
@@ -30,11 +34,21 @@ type TabType = 'Home' | 'Book' | 'Assist' | 'Profile';
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onLogout,
   userName = 'Nimal Perera',
+  initialTab,
   onNavigateToNotifications,
   onNavigateToBookingHistory,
   onNavigateToHelpSupport,
+  onNavigateToPersonalDetails,
+  onNavigateToInsuranceInfo,
+  onNavigateToNotificationSettings,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('Home');
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'Home');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [clinicsList, setClinicsList] = useState<any[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<number>(4);
@@ -230,6 +244,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             onLogout={onLogout}
             onNavigateToBookingHistory={onNavigateToBookingHistory}
             onNavigateToHelpSupport={onNavigateToHelpSupport}
+            onNavigateToPersonalDetails={onNavigateToPersonalDetails}
+            onNavigateToInsuranceInfo={onNavigateToInsuranceInfo}
+            onNavigateToNotificationSettings={onNavigateToNotificationSettings}
           />
         );
     }

@@ -15,6 +15,9 @@ interface ProfileTabProps {
   onLogout: () => void;
   onNavigateToBookingHistory?: () => void;
   onNavigateToHelpSupport?: () => void;
+  onNavigateToPersonalDetails?: () => void;
+  onNavigateToInsuranceInfo?: () => void;
+  onNavigateToNotificationSettings?: () => void;
 }
 
 export const ProfileTab: React.FC<ProfileTabProps> = ({
@@ -23,6 +26,9 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   onLogout,
   onNavigateToBookingHistory,
   onNavigateToHelpSupport,
+  onNavigateToPersonalDetails,
+  onNavigateToInsuranceInfo,
+  onNavigateToNotificationSettings,
 }) => {
   const userName = userProfile?.name || 'Patient';
   const userEmail = userProfile?.email || 'patient@queueease.lk';
@@ -37,8 +43,8 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   const currentTurn = activeBooking ? `#${activeBooking.number}` : 'None';
 
   const renderChevronRight = () => (
-    <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <Path d="M9 5l7 7-7 7" stroke={COLORS.textMuted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <Svg width="16" height="16" viewBox="0 0 24 24">
+      <Path d="M9 5l7 7-7 7" stroke={COLORS.textMuted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </Svg>
   );
 
@@ -67,7 +73,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       </View>
 
       <View style={styles.profileOptionsContainer}>
-        <TouchableOpacity style={styles.profileOptionRow}>
+        <TouchableOpacity style={styles.profileOptionRow} onPress={onNavigateToPersonalDetails}>
           <Text style={styles.profileOptionText}>Personal Details</Text>
           {renderChevronRight()}
         </TouchableOpacity>
@@ -75,11 +81,11 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
           <Text style={styles.profileOptionText}>Booking History</Text>
           {renderChevronRight()}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.profileOptionRow}>
+        <TouchableOpacity style={styles.profileOptionRow} onPress={onNavigateToInsuranceInfo}>
           <Text style={styles.profileOptionText}>Insurance Info</Text>
           {renderChevronRight()}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.profileOptionRow}>
+        <TouchableOpacity style={styles.profileOptionRow} onPress={onNavigateToNotificationSettings}>
           <Text style={styles.profileOptionText}>Notification Settings</Text>
           {renderChevronRight()}
         </TouchableOpacity>

@@ -19,6 +19,9 @@ import HomeScreen from './src/screens/patient/HomeScreen';
 import NotificationsScreen from './src/screens/patient/NotificationsScreen';
 import BookingHistoryScreen from './src/screens/patient/BookingHistoryScreen';
 import HelpSupportScreen from './src/screens/patient/HelpSupportScreen';
+import PersonalDetailsScreen from './src/screens/patient/PersonalDetailsScreen';
+import InsuranceInfoScreen from './src/screens/patient/InsuranceInfoScreen';
+import NotificationSettingsScreen from './src/screens/patient/NotificationSettingsScreen';
 import DoctorScreen from './src/screens/doctor/DoctorScreen';
 import Logo from './src/components/Logo';
 import COLORS from './src/theme/colors';
@@ -31,7 +34,10 @@ type ScreenState =
   | 'doctor_dashboard'
   | 'notifications'
   | 'booking_history'
-  | 'help_support';
+  | 'help_support'
+  | 'personal_details'
+  | 'insurance_info'
+  | 'notification_settings';
 
 const SplashScreen = () => {
   return (
@@ -62,6 +68,7 @@ function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenState>('login');
   const [_userRole, setUserRole] = useState<'patient' | 'doctor'>('patient');
   const [servingNumber, setServingNumber] = useState(4);
+  const [initialDashboardTab, setInitialDashboardTab] = useState<'Home' | 'Book' | 'Assist' | 'Profile'>('Home');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -112,19 +119,55 @@ function App() {
       case 'notifications':
         return (
           <NotificationsScreen
-            onBack={() => setCurrentScreen('patient_dashboard')}
+            onBack={() => {
+              setInitialDashboardTab('Home');
+              setCurrentScreen('patient_dashboard');
+            }}
           />
         );
       case 'booking_history':
         return (
           <BookingHistoryScreen
-            onBack={() => setCurrentScreen('patient_dashboard')}
+            onBack={() => {
+              setInitialDashboardTab('Profile');
+              setCurrentScreen('patient_dashboard');
+            }}
           />
         );
       case 'help_support':
         return (
           <HelpSupportScreen
-            onBack={() => setCurrentScreen('patient_dashboard')}
+            onBack={() => {
+              setInitialDashboardTab('Profile');
+              setCurrentScreen('patient_dashboard');
+            }}
+          />
+        );
+      case 'personal_details':
+        return (
+          <PersonalDetailsScreen
+            onBack={() => {
+              setInitialDashboardTab('Profile');
+              setCurrentScreen('patient_dashboard');
+            }}
+          />
+        );
+      case 'insurance_info':
+        return (
+          <InsuranceInfoScreen
+            onBack={() => {
+              setInitialDashboardTab('Profile');
+              setCurrentScreen('patient_dashboard');
+            }}
+          />
+        );
+      case 'notification_settings':
+        return (
+          <NotificationSettingsScreen
+            onBack={() => {
+              setInitialDashboardTab('Profile');
+              setCurrentScreen('patient_dashboard');
+            }}
           />
         );
       case 'patient_dashboard':
@@ -132,9 +175,31 @@ function App() {
           <HomeScreen
             onLogout={handleLogout}
             userName="Nimal Perera"
-            onNavigateToNotifications={() => setCurrentScreen('notifications')}
-            onNavigateToBookingHistory={() => setCurrentScreen('booking_history')}
-            onNavigateToHelpSupport={() => setCurrentScreen('help_support')}
+            initialTab={initialDashboardTab}
+            onNavigateToNotifications={() => {
+              setInitialDashboardTab('Home');
+              setCurrentScreen('notifications');
+            }}
+            onNavigateToBookingHistory={() => {
+              setInitialDashboardTab('Profile');
+              setCurrentScreen('booking_history');
+            }}
+            onNavigateToHelpSupport={() => {
+              setInitialDashboardTab('Profile');
+              setCurrentScreen('help_support');
+            }}
+            onNavigateToPersonalDetails={() => {
+              setInitialDashboardTab('Profile');
+              setCurrentScreen('personal_details');
+            }}
+            onNavigateToInsuranceInfo={() => {
+              setInitialDashboardTab('Profile');
+              setCurrentScreen('insurance_info');
+            }}
+            onNavigateToNotificationSettings={() => {
+              setInitialDashboardTab('Profile');
+              setCurrentScreen('notification_settings');
+            }}
           />
         );
       case 'doctor_dashboard':
